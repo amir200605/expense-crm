@@ -87,7 +87,7 @@ function getGroupContainingPath(pathname: string): string | null {
   return null;
 }
 
-export function Sidebar({ user }: { user: SessionUser }) {
+export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMessages?: () => void }) {
   const pathname = usePathname();
   const role = user?.role ?? "";
 
@@ -161,6 +161,25 @@ export function Sidebar({ user }: { user: SessionUser }) {
                       const active =
                         pathname === item.href ||
                         (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
+                      const isMessages = item.href === "/messages" && onOpenMessages;
+                      if (isMessages) {
+                        return (
+                          <button
+                            key={item.href}
+                            type="button"
+                            onClick={onOpenMessages}
+                            className={cn(
+                              "flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium transition-all duration-200",
+                              "text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground"
+                            )}
+                          >
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sidebar-muted">
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            {item.label}
+                          </button>
+                        );
+                      }
                       return (
                         <Link
                           key={item.href}
