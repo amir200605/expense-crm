@@ -22,8 +22,14 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.username || !credentials?.password) {
           throw new Error("Invalid username or password.");
         }
+        const login = credentials.username.trim();
         const user = await prisma.user.findFirst({
-          where: { username: credentials.username },
+          where: {
+            OR: [
+              { username: login },
+              { email: login },
+            ],
+          },
           include: { agency: true },
         });
         if (!user || !user.password) {
