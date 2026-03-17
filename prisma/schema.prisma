@@ -1,0 +1,656 @@
+// ExpenseFlow CRM - Final Expense CRM
+// Prisma schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ ENUMS ============
+
+enum Role {
+  SUPER_ADMIN
+  AGENCY_OWNER
+  MANAGER
+  AGENT
+  QA_COMPLIANCE
+}
+
+enum LeadDisposition {
+  NEW
+  ATTEMPTING_CONTACT
+  CONTACTED
+  INTERESTED
+  APPOINTMENT_SET
+  PRESENTED
+  APPLICATION_SENT
+  SOLD
+  NOT_INTERESTED
+  BAD_LEAD
+  DNC
+  RECYCLE
+  FOLLOW_UP_LATER
+}
+
+enum PipelineStage {
+  NEW_LEAD
+  CONTACTING
+  QUOTED
+  APPOINTMENT_SET
+  APPLICATION_STARTED
+  UNDERWRITING
+  APPROVED
+  PLACED
+  CHARGEBACK_RISK
+  LOST
+}
+
+enum PolicyStatus {
+  DRAFT
+  SUBMITTED
+  PENDING_UNDERWRITING
+  APPROVED
+  PLACED
+  DECLINED
+  CANCELLED
+  LAPSED
+  CHARGEBACK
+}
+
+enum TaskType {
+  CALL
+  SMS
+  EMAIL
+  APPOINTMENT
+  DOCUMENT_REQUEST
+  FOLLOW_UP
+  BIRTHDAY_CHECK_IN
+  POLICY_REVIEW
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AppointmentType {
+  IN_PERSON
+  PHONE
+  VIDEO
+  CALLBACK
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
+
+enum CommissionStatus {
+  PENDING
+  EXPECTED
+  RECEIVED
+  CHARGEBACK
+  ADJUSTED
+}
+
+enum AutomationTrigger {
+  LEAD_CREATED
+  LEAD_ASSIGNED
+  STATUS_CHANGED
+  NO_CONTACT_DAYS
+  APPOINTMENT_SET
+  APPOINTMENT_MISSED
+  POLICY_APPROVED
+  BIRTHDAY_UPCOMING
+  DRAFT_DATE_APPROACHING
+  CHARGEBACK_RISK
+}
+
+enum AuditAction {
+  LEAD_CREATED
+  LEAD_ASSIGNED
+  LEAD_STATUS_CHANGED
+  NOTE_ADDED
+  SMS_SENT
+  EMAIL_SENT
+  POLICY_EDITED
+  COMMISSION_ADJUSTED
+  CHARGEBACK_ADDED
+  USER_LOGIN
+  PERMISSIONS_CHANGED
+  CLIENT_CREATED
+  TASK_CREATED
+  APPOINTMENT_CREATED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageChannel {
+  SMS
+  EMAIL
+}
+
+// ============ MODELS ============
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Agency {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  settings     Json?
+  billingEmail String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users          User[]
+  leads          Lead[]
+  clients        Client[]
+  tags           Tag[]
+  automations    Automation[]
+  reportPresets  ReportPreset[]
+  communicationTemplates CommunicationTemplate[]
+}
+
+model User {
+  id            String    @id @default(cuid())
+  username      String?   @unique
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  name          String?
+  phone         String?
+  avatarUrl     String?
+  role          Role      @default(AGENT)
+  agencyId      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  agency                    Agency?   @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  accounts                  Account[]
+  sessions                  Session[]
+  leadsAssignedAsAgent      Lead[]     @relation("AssignedAgent")
+  leadsAssignedAsManager    Lead[]     @relation("AssignedManager")
+  tasks                     Task[]     @relation("TaskAssignedTo")
+  appointments              Appointment[]
+  commissions               Commission[]
+  automationRuns            AutomationRun[]
+  activityLogs              ActivityLog[]
+  notesAuthored             Note[]         @relation("NotesAuthored")
+  notifications             Notification[]
+  employeeChatsA            EmployeeChat[] @relation("EmployeeChatA")
+  employeeChatsB            EmployeeChat[] @relation("EmployeeChatB")
+  employeeChatMessages      EmployeeChatMessage[]
+
+  @@index([agencyId])
+  @@index([role])
+}
+
+model Lead {
+  id                    String           @id @default(cuid())
+  agencyId              String
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  source                String?
+  vendor                String?
+  campaign              String?
+  subId                 String?
+  firstName             String
+  lastName              String
+  fullName              String?
+  phone                 String
+  email                 String?
+  dateOfBirth           DateTime?
+  age                   Int?
+  gender                String?
+  address1              String?
+  address2              String?
+  city                  String?
+  state                 String?
+  zip                   String?
+  county                String?
+  smokerStatus          String?
+  coverageAmountInterest Decimal?
+  beneficiaryName       String?
+  preferredLanguage    String?
+  bestCallTime          String?
+  leadCost              Decimal?
+  leadScore             Int?
+  consentStatus        String?
+  doNotCall             Boolean          @default(false)
+  lastContactedAt      DateTime?
+  nextFollowUpAt       DateTime?
+  assignedAgentId      String?
+  assignedManagerId    String?
+  disposition          LeadDisposition   @default(NEW)
+  pipelineStage        PipelineStage     @default(NEW_LEAD)
+  notes                String?
+  rawPayload           Json?
+  duplicateGroupId     String?
+
+  agency           Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  assignedAgent    User?     @relation("AssignedAgent", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  assignedManager  User?     @relation("AssignedManager", fields: [assignedManagerId], references: [id], onDelete: SetNull)
+  client           Client?
+  tasks            Task[]
+  appointments     Appointment[]
+  notesList        Note[]
+  tags             LeadTag[]
+  messageThreads   MessageThread[]
+
+  @@index([agencyId, pipelineStage])
+  @@index([assignedAgentId, disposition])
+  @@index([phone])
+  @@index([duplicateGroupId])
+  @@index([createdAt])
+}
+
+model LeadTag {
+  leadId String
+  tagId  String
+  lead   Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([leadId, tagId])
+}
+
+model Tag {
+  id       String   @id @default(cuid())
+  name     String
+  color    String?
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  leads    LeadTag[]
+
+  @@unique([agencyId, name])
+}
+
+model Client {
+  id                   String    @id @default(cuid())
+  agencyId             String
+  linkedLeadId         String?   @unique
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  firstName            String
+  lastName             String
+  email                String?
+  phone                String
+  dateOfBirth          DateTime?
+  address1             String?
+  address2             String?
+  city                 String?
+  state                String?
+  zip                  String?
+  beneficiaryName      String?
+  beneficiaryRelation  String?
+  existingCoverage     String?
+  replacementWarning   Boolean   @default(false)
+  policyStatus         String?
+  underwritingStatus   String?
+  policyEffectiveDate  DateTime?
+  premiumAmount        Decimal?
+  paymentMode          String?
+  carrier              String?
+  productName          String?
+  faceAmount           Decimal?
+  agentOfRecordId      String?
+  chargebackRisk       Boolean   @default(false)
+  documentChecklist    Json?
+  notes                String?
+  householdNotes       String?
+
+  agency        Agency     @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  lead          Lead?      @relation(fields: [linkedLeadId], references: [id], onDelete: SetNull)
+  policies      Policy[]
+  tasks         Task[]
+  appointments  Appointment[]
+  notesList     Note[]
+  commissions   Commission[]
+  messageThreads MessageThread[]
+
+  @@index([agencyId])
+  @@index([linkedLeadId])
+}
+
+model Policy {
+  id                    String        @id @default(cuid())
+  clientId              String
+  policyNumber          String?
+  carrier               String?
+  productName           String?
+  faceAmount            Decimal?
+  premium               Decimal?
+  modalPremium          Decimal?
+  appDate               DateTime?
+  submittedDate         DateTime?
+  approvedDate          DateTime?
+  effectiveDate         DateTime?
+  policyStatus          PolicyStatus  @default(DRAFT)
+  underwritingClass     String?
+  paymentDraftDate      DateTime?
+  replacementFlag       Boolean       @default(false)
+  policyNotes           String?
+  commissionablePremium Decimal?
+  chargebackWindowEnd   DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  commissions  Commission[]
+  chargebacks  Chargeback[]
+
+  @@index([clientId])
+  @@index([policyStatus])
+}
+
+model Commission {
+  id             String           @id @default(cuid())
+  agentId        String
+  clientId       String
+  policyId       String?
+  carrier        String?
+  product        String?
+  amount         Decimal
+  expectedDate   DateTime?
+  receivedDate   DateTime?
+  status         CommissionStatus @default(PENDING)
+  advanceAmount  Decimal?
+  balanceDue     Decimal?
+  splitOverrides Json?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  agent   User    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  client  Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  policy  Policy? @relation(fields: [policyId], references: [id], onDelete: SetNull)
+
+  @@index([agentId])
+  @@index([clientId])
+  @@index([expectedDate])
+}
+
+model Chargeback {
+  id        String   @id @default(cuid())
+  policyId  String
+  agentId   String
+  amount    Decimal
+  reason    String?
+  date      DateTime
+  recovered Boolean  @default(false)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([policyId])
+  @@index([agentId])
+}
+
+model Task {
+  id               String     @id @default(cuid())
+  title            String
+  description      String?
+  priority         Int        @default(0)
+  dueDate          DateTime
+  assignedToId     String
+  relatedLeadId    String?
+  relatedClientId  String?
+  status           TaskStatus @default(PENDING)
+  type             TaskType   @default(FOLLOW_UP)
+  completedAt      DateTime?
+  recurrence       Json?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  assignedTo User    @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: Cascade)
+  lead       Lead?   @relation(fields: [relatedLeadId], references: [id], onDelete: SetNull)
+  client     Client? @relation(fields: [relatedClientId], references: [id], onDelete: SetNull)
+
+  @@index([assignedToId, dueDate])
+  @@index([relatedLeadId])
+  @@index([relatedClientId])
+}
+
+model Appointment {
+  id            String            @id @default(cuid())
+  leadId        String?
+  clientId      String?
+  agentId       String
+  date          DateTime
+  startTime     String
+  endTime       String
+  timezone      String?
+  type          AppointmentType   @default(PHONE)
+  location      String?
+  notes         String?
+  reminderSent  Boolean           @default(false)
+  status        AppointmentStatus @default(SCHEDULED)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  agent  User    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([date])
+  @@index([leadId])
+  @@index([clientId])
+}
+
+model Note {
+  id               String   @id @default(cuid())
+  content          String
+  authorId         String
+  relatedLeadId    String?
+  relatedClientId  String?
+  createdAt        DateTime @default(now())
+
+  author User?   @relation("NotesAuthored", fields: [authorId], references: [id], onDelete: Cascade)
+  lead   Lead?   @relation(fields: [relatedLeadId], references: [id], onDelete: Cascade)
+  client Client? @relation(fields: [relatedClientId], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id         String     @id @default(cuid())
+  userId     String?
+  action     AuditAction
+  entityType String
+  entityId   String?
+  oldValue   Json?
+  newValue   Json?
+  ip         String?
+  createdAt  DateTime   @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model MessageThread {
+  id        String         @id @default(cuid())
+  leadId    String?
+  clientId  String?
+  type      MessageChannel @default(SMS)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  lead     Lead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  client   Client?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  messages Message[]
+}
+
+model Message {
+  id         String          @id @default(cuid())
+  threadId   String
+  direction MessageDirection
+  body       String
+  providerId String?
+  sentAt     DateTime        @default(now())
+  metadata   Json?
+
+  thread MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, sentAt])
+}
+
+model CommunicationTemplate {
+  id       String         @id @default(cuid())
+  agencyId String
+  name     String
+  type     MessageChannel
+  body     String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+}
+
+model Automation {
+  id        String   @id @default(cuid())
+  agencyId  String
+  name      String
+  trigger   AutomationTrigger
+  triggerConfig Json?
+  actions   Json
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agency Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  runs   AutomationRun[]
+}
+
+model AutomationRun {
+  id              String    @id @default(cuid())
+  automationId    String
+  userId          String
+  triggerEntityId String?
+  status          String    @default("running")
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  steps           Json?
+
+  automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WebhookEvent {
+  id         String    @id @default(cuid())
+  source     String?
+  payload    Json
+  processedAt DateTime?
+  leadId     String?
+  createdAt  DateTime  @default(now())
+}
+
+model ReportPreset {
+  id        String   @id @default(cuid())
+  name      String
+  agencyId  String
+  userId    String?
+  filters   Json?
+  type      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String?
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, read])
+}
+
+model EmployeeChat {
+  id        String   @id @default(cuid())
+  agencyId  String
+  userAId   String
+  userBId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userA User @relation("EmployeeChatA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB User @relation("EmployeeChatB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages EmployeeChatMessage[]
+
+  @@index([agencyId])
+  @@index([userAId])
+  @@index([userBId])
+  @@unique([agencyId, userAId, userBId])
+}
+
+model EmployeeChatMessage {
+  id        String   @id @default(cuid())
+  chatId    String
+  agencyId  String
+  senderId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  chat   EmployeeChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, createdAt])
+  @@index([agencyId])
+  @@index([senderId])
+}

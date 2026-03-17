@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Fynix / AI Finance: light content area */
+    --background: 220 20% 97%;
+    --content: 220 18% 96%;
+    --panel: 220 14% 94%;
+    /* Text */
+    --foreground: 222 47% 11%;
+    --heading: 222 47% 11%;
+    /* Navbar + Sidebar: dark navy (unified strip) */
+    --navbar: 222 44% 11%;
+    --sidebar: 222 44% 11%;
+    --sidebar-foreground: 210 30% 98%;
+    --sidebar-muted: 215 20% 70%;
+    /* Cards: white */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    /* Primary = teal (Fynix brand) */
+    --primary: 166 76% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 18% 94%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 220 18% 94%;
+    --muted-foreground: 220 10% 42%;
+    /* Accent: light teal tint */
+    --accent: 166 50% 94%;
+    --accent-foreground: 166 76% 28%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 88%;
+    --input: 220 14% 88%;
+    --ring: 166 76% 40%;
+    --radius: 0.75rem;
+    /* Softer, slightly stronger shadows */
+    --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+    --shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+    --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.06);
+    --shadow-card: 0 2px 8px rgba(15, 23, 42, 0.06), 0 8px 24px -8px rgba(15, 23, 42, 0.1);
+    /* Status pills */
+    --status-new-bg: 220 14% 94%;
+    --status-new-fg: 220 9% 46%;
+    --status-interested-bg: 38 92% 90%;
+    --status-interested-fg: 25 45% 22%;
+    --status-sold-bg: 142 55% 92%;
+    --status-sold-fg: 142 45% 28%;
+    --chart-1: 166 76% 40%;
+    --chart-2: 166 50% 85%;
+    --chart-3: 220 9% 46%;
+    --chart-4: 38 92% 65%;
+    --chart-5: 142 55% 45%;
+    --table-header: 220 18% 96%;
+    --insight: 166 76% 40%;
+    --insight-muted: 166 50% 94%;
+  }
+  .dark {
+    --background: 222 47% 6%;
+    --content: 222 40% 9%;
+    --panel: 222 40% 12%;
+    --foreground: 210 40% 98%;
+    --heading: 210 40% 98%;
+    --navbar: 222 44% 9%;
+    --sidebar: 222 44% 9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-muted: 214 20% 65%;
+    --card: 222 47% 8%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 22%;
+    --input: 217 33% 17%;
+    --ring: 214 100% 94%;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.2);
+    --status-new-bg: 210 14% 94%;
+    --status-new-fg: 210 10% 35%;
+    --status-interested-bg: 38 92% 88%;
+    --status-interested-fg: 25 45% 22%;
+    --status-sold-bg: 142 55% 90%;
+    --status-sold-fg: 142 45% 25%;
+    --chart-1: 214 100% 94%;
+    --chart-2: 210 10% 20%;
+    --chart-3: 210 8% 64%;
+    --chart-4: 38 92% 60%;
+    --chart-5: 142 55% 45%;
+    --table-header: 210 14% 96%;
+    --insight: 166 76% 48%;
+    --insight-muted: 166 40% 18%;
+  }
+}
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-semibold;
+    color: hsl(var(--heading));
+  }
+}
+
+@layer components {
+  /* Navbar/sidebar dark strip (Fynix) */
+  .navbar-dark {
+    background-color: hsl(var(--navbar));
+    border-bottom: 1px solid hsl(222 30% 18%);
+  }
+  .sidebar-dark {
+    background-color: hsl(var(--sidebar));
+    border-right: 1px solid hsl(222 30% 18%);
+  }
+  /* Glass (for modals/floating panels if needed) */
+  .glass {
+    @apply bg-card/90 backdrop-blur-md supports-[backdrop-filter]:bg-card/80 border-border/80;
+  }
+  /* Professional card elevation */
+  .card-elevated {
+    @apply bg-card rounded-2xl border border-border shadow-card;
+  }
+  .card-elevated-hover {
+    @apply card-elevated transition-shadow hover:shadow-soft-md;
+  }
+  /* Fynix-style insight card: subtle teal tint + left accent for “at a glance” widgets */
+  .card-insight {
+    @apply rounded-2xl border border-border bg-card shadow-card;
+    background-image: linear-gradient(to bottom, hsl(var(--insight-muted)) 0%, transparent 12%);
+    border-left-width: 4px;
+    border-left-color: hsl(var(--insight));
+  }
+  /* CRM table header (used by Table component) */
+  .table-header-row {
+    @apply bg-muted/50;
+  }
+  /* Status pills: New = soft gray, Interested/Quoted = amber, Sold/Closed = mint */
+  .status-pill-new {
+    background-color: hsl(var(--status-new-bg));
+    color: hsl(var(--status-new-fg));
+  }
+  .status-pill-interested {
+    background-color: hsl(var(--status-interested-bg));
+    color: hsl(var(--status-interested-fg));
+  }
+  .status-pill-sold {
+    background-color: hsl(var(--status-sold-bg));
+    color: hsl(var(--status-sold-fg));
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+}
