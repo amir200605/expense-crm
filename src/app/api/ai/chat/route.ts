@@ -69,6 +69,7 @@ export async function POST(req: Request) {
       allMessages.push(assistantMessage);
 
       for (const toolCall of assistantMessage.tool_calls) {
+        if (!("function" in toolCall) || !toolCall.function?.name) continue;
         const result = await executeCrmTool(toolCall.function.name, agencyId);
         allMessages.push({
           role: "tool",

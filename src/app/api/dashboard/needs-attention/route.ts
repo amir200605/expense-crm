@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/permissions";
+import type { Prisma } from "@prisma/client";
 
 const LIMIT = 10;
 
@@ -24,11 +25,7 @@ export async function GET(req: Request) {
   const now = new Date();
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 
-  const where: {
-    agencyId: string;
-    nextFollowUpAt: { lte: Date; not: null };
-    OR?: { assignedAgentId: string }[] | { assignedManagerId: string }[];
-  } = {
+  const where: Prisma.LeadWhereInput = {
     agencyId,
     nextFollowUpAt: { lte: endOfToday, not: null },
   };

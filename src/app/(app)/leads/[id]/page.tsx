@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { canViewLead } from "@/lib/permissions";
 import { getLeadById } from "@/lib/services/lead.service";
 import { serializeLeadForClient } from "@/lib/utils";
-import { LeadDetailClient } from "@/components/leads/lead-detail-client";
+import { LeadDetailClient, type LeadDetail } from "@/components/leads/lead-detail-client";
 
 export default async function LeadDetailPage({
   params,
@@ -17,6 +17,6 @@ export default async function LeadDetailPage({
   const lead = await getLeadById(id);
   if (!lead) notFound();
   if (!canViewLead(session, lead)) notFound();
-  const serialized = serializeLeadForClient(lead as unknown as Record<string, unknown>);
+  const serialized = serializeLeadForClient(lead as unknown as Record<string, unknown>) as unknown as LeadDetail;
   return <LeadDetailClient leadId={id} initialLead={serialized} />;
 }

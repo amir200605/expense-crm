@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canAccessAutomations } from "@/lib/permissions";
 import type { SessionUser } from "@/lib/permissions";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -54,8 +55,8 @@ export async function POST(req: Request) {
       agencyId: user.agencyId!,
       name: parsed.data.name,
       trigger: parsed.data.trigger,
-      triggerConfig: parsed.data.triggerConfig ?? {},
-      actions: parsed.data.actions as object[],
+      triggerConfig: (parsed.data.triggerConfig ?? {}) as Prisma.InputJsonValue,
+      actions: parsed.data.actions as unknown as Prisma.InputJsonValue,
       enabled: parsed.data.enabled ?? false,
     },
   });

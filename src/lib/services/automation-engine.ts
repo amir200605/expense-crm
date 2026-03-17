@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import type { AutomationTrigger } from "@prisma/client";
+import type { AutomationTrigger, LeadDisposition, PipelineStage } from "@prisma/client";
 import Telnyx from "telnyx";
 import nodemailer from "nodemailer";
 
@@ -198,7 +198,7 @@ async function executeAction(action: ActionNode, ctx: TriggerContext, integratio
       if (!ctx.leadId || !c.stage) break;
       await prisma.lead.update({
         where: { id: ctx.leadId },
-        data: { pipelineStage: c.stage as string },
+        data: { pipelineStage: c.stage as PipelineStage },
       });
       break;
     }
@@ -207,7 +207,7 @@ async function executeAction(action: ActionNode, ctx: TriggerContext, integratio
       if (!ctx.leadId || !c.disposition) break;
       await prisma.lead.update({
         where: { id: ctx.leadId },
-        data: { disposition: c.disposition as string },
+        data: { disposition: c.disposition as LeadDisposition },
       });
       break;
     }
@@ -218,10 +218,10 @@ async function executeAction(action: ActionNode, ctx: TriggerContext, integratio
       if (rule === "round_robin" || rule === "least_leads") {
         const agents = await prisma.user.findMany({
           where: { agencyId: ctx.agencyId, role: "AGENT" },
-          include: { _count: { select: { assignedLeads: true } } },
+          include: { _count: { select: { leadsAssignedAsAgent: true } } },
         });
         if (agents.length === 0) break;
-        const sorted = [...agents].sort((a, b) => a._count.assignedLeads - b._count.assignedLeads);
+        const sorted = [...agents].sort((a, b) => a._count.leadsAssignedAsAgent - b._count.leadsAssignedAsAgent);
         await prisma.lead.update({
           where: { id: ctx.leadId },
           data: { assignedAgentId: sorted[0].id },
@@ -319,11 +319,13 @@ async function executeAction(action: ActionNode, ctx: TriggerContext, integratio
       if (sendTo === "custom") {
         smsTo = (c.customPhone as string) || null;
       } else if (ctx.leadId) {
-        const lead = await prisma.lead.findUnique({ where: { id: ctx.leadId }, select: { phone: true, clientId: true } });
+        const lead = await prisma.lead.findUnique({
+          where: { id: ctx.leadId },
+          select: { phone: true, client: { select: { phone: true } } },
+        });
         if (sendTo === "lead_phone" && lead?.phone) smsTo = lead.phone;
-        else if (sendTo === "client_phone" && lead?.clientId) {
-          const client = await prisma.client.findUnique({ where: { id: lead.clientId }, select: { phone: true } });
-          if (client?.phone) smsTo = client.phone;
+        else if (sendTo === "client_phone" && lead?.client?.phone) {
+          smsTo = lead.client.phone;
         }
       }
       const message = (c.message as string) ?? "";
@@ -361,19 +363,17 @@ async function executeAction(action: ActionNode, ctx: TriggerContext, integratio
         if (sendTo === "custom") {
           emailTo = (c.customEmail as string) || null;
         } else if (ctx.leadId) {
-        const lead = await prisma.lead.findUnique({
-          where: { id: ctx.leadId },
-          select: { email: true, clientId: true, assignedAgentId: true },
-        });
-        if (sendTo === "lead_email" && lead?.email) emailTo = lead.email;
-        else if (sendTo === "client_email" && lead?.clientId) {
-          const client = await prisma.client.findUnique({ where: { id: lead.clientId }, select: { email: true } });
-          if (client?.email) emailTo = client.email;
-        } else if (sendTo === "assigned_agent" && lead?.assignedAgentId) {
-          const agent = await prisma.user.findUnique({ where: { id: lead.assignedAgentId }, select: { email: true } });
-          if (agent?.email) emailTo = agent.email;
+          const lead = await prisma.lead.findUnique({
+            where: { id: ctx.leadId },
+            select: { email: true, client: { select: { email: true } }, assignedAgentId: true },
+          });
+          if (sendTo === "lead_email" && lead?.email) emailTo = lead.email;
+          else if (sendTo === "client_email" && lead?.client?.email) emailTo = lead.client.email;
+          else if (sendTo === "assigned_agent" && lead?.assignedAgentId) {
+            const agent = await prisma.user.findUnique({ where: { id: lead.assignedAgentId }, select: { email: true } });
+            if (agent?.email) emailTo = agent.email;
+          }
         }
-      }
       }
       const subject = (c.subject as string) ?? "";
       const body = (c.body as string) ?? "";

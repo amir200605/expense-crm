@@ -23,21 +23,31 @@ async function fetchChat(id: string): Promise<{ chat: Chat }> {
   return res.json();
 }
 
-export default function ChatPage({ params }: { params: { id: string } }) {
+export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const qc = useQueryClient();
   const [body, setBody] = useState("");
+  // Next 15 types may provide params as a Promise in generated PageProps.
+  // This is a client component; we normalize to a string id via useMemo.
+  const idPromise = params;
+  const [id, setId] = useState<string>("");
+
+  useMemo(() => {
+    void idPromise.then((p) => setId(p.id)).catch(() => setId(""));
+    return null;
+  }, [idPromise]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["employee-chat", params.id],
-    queryFn: () => fetchChat(params.id),
+    queryKey: ["employee-chat", id],
+    queryFn: () => fetchChat(id),
     refetchInterval: 10_000,
+    enabled: Boolean(id),
   });
 
   const chat = data?.chat;
 
   const send = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/employee-chats/${params.id}`, {
+      const res = await fetch(`/api/employee-chats/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body }),
@@ -48,7 +58,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     },
     onSuccess: async () => {
       setBody("");
-      await qc.invalidateQueries({ queryKey: ["employee-chat", params.id] });
+      await qc.invalidateQueries({ queryKey: ["employee-chat", id] });
       await qc.invalidateQueries({ queryKey: ["employee-chats"] });
     },
   });

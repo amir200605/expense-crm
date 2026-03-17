@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     }
 
     const nameParts = name.trim().split(/\s+/);
-    const firstName = nameParts[0] ?? name.trim() || "—";
+    const firstName = (nameParts[0] ?? name.trim()) || "—";
     const lastName = nameParts.slice(1).join(" ") || "—";
     const phoneValue = (phone?.trim() && phone.trim().length > 0) ? phone.trim() : "—";
 

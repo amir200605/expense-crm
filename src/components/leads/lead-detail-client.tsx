@@ -26,6 +26,29 @@ interface TeamMember {
   role: string;
 }
 
+export type LeadDetail = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string | null;
+  phone: string;
+  email: string | null;
+  disposition: string;
+  pipelineStage: string;
+  source: string | null;
+  state: string | null;
+  city: string | null;
+  zip: string | null;
+  notes: string | null;
+  lastContactedAt: string | null;
+  nextFollowUpAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignedAgent: { id?: string; name: string | null; email: string | null } | null;
+  assignedManager: { name: string | null } | null;
+  client?: { id: string } | null;
+};
+
 async function fetchLead(id: string) {
   const res = await fetch(`/api/leads/${id}`);
   if (!res.ok) throw new Error("Failed to fetch lead");
@@ -43,28 +66,7 @@ export function LeadDetailClient({
   initialLead,
 }: {
   leadId: string;
-  initialLead: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    fullName: string | null;
-    phone: string;
-    email: string | null;
-    disposition: string;
-    pipelineStage: string;
-    source: string | null;
-    state: string | null;
-    city: string | null;
-    zip: string | null;
-    notes: string | null;
-    lastContactedAt: string | null;
-    nextFollowUpAt: string | null;
-    createdAt: string;
-    updatedAt: string;
-    assignedAgent: { id?: string; name: string | null; email: string | null } | null;
-    assignedManager: { name: string | null } | null;
-    client?: { id: string } | null;
-  };
+  initialLead: LeadDetail;
 }) {
   const queryClient = useQueryClient();
   const router = useRouter();
