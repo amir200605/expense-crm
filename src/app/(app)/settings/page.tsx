@@ -208,7 +208,7 @@ export default function SettingsPage() {
           <CardContent>
             <form onSubmit={handleIntegrationsSubmit} className="space-y-6">
               <div className="space-y-4">
-                <h4 className="text-sm font-medium">SMS (Telnyx)</h4>
+                <h4 className="text-sm font-medium">SMS</h4>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="telnyx-api-key">API Key</Label>
