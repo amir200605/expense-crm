@@ -202,7 +202,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Integrations</CardTitle>
             <CardDescription>
-              Configure <strong>SMS (Telnyx)</strong> and <strong>Email (Outlook)</strong> so automations can send real messages. Leave blank to only log actions (no messages sent).
+              Configure <strong>SMS</strong> and <strong>Email (Outlook)</strong> so automations can send real messages. Leave blank to only log actions (no messages sent).
             </CardDescription>
           </CardHeader>
           <CardContent>
