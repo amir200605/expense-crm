@@ -1,5 +1,39 @@
 # Running on Replit
 
+## Database (Replit PostgreSQL)
+
+This app uses **PostgreSQL** with Prisma — the same type of database Replit provides.
+
+1. **Create / attach the database**
+   - In Replit, open the **Database** tool (or **+ Create database** → **PostgreSQL**).
+   - Follow the prompts to provision a Postgres instance for your Repl.
+
+2. **Connection string (`DATABASE_URL`)**
+   - Replit often **injects `DATABASE_URL` automatically** when the database is linked to the Repl.
+   - Confirm under **Tools → Secrets** (or **Deployment → Secrets** for published apps) that **`DATABASE_URL`** exists and looks like:
+     `postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=require`
+   - If it’s missing, copy the **connection URI** from the Database panel and add it as a secret named **`DATABASE_URL`** (exact name).
+
+3. **Apply the schema (required once per environment)**
+   - Open the Shell and run:
+     ```bash
+     npx prisma migrate deploy
+     ```
+   - Optional: seed demo data:
+     ```bash
+     npm run db:seed
+     ```
+   - Or bootstrap a minimal agency + admin user:
+     ```bash
+     curl -X POST https://YOUR-REPL-URL/api/auth/ensure-demo-user
+     ```
+
+4. **Restart the Repl** after changing secrets so `DATABASE_URL` is picked up.
+
+5. **SSL errors** — If Prisma can’t connect, use the URL Replit shows (often includes `sslmode=require`). Don’t commit secrets; keep them only in Replit Secrets.
+
+---
+
 ## Telnyx SMS (`TELNYX_API_KEY`)
 
 1. In Replit, open **Tools → Secrets** (lock icon).
