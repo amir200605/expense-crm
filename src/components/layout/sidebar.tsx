@@ -219,37 +219,27 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
         })}
       </nav>
       <div className="border-t border-white/10 p-3">
-        <div className="mb-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+        <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
           <div className="bg-primary px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary-foreground">
             Prime Insurance Agency
           </div>
-          <div className="flex items-start gap-3 px-3 py-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-primary/40 text-sm font-semibold text-primary">
-              {firstLetter}
-            </div>
-            <div className="min-w-0 text-xs text-sidebar-muted">
-              <p className="truncate text-sm font-semibold uppercase tracking-wide text-sidebar-foreground">
-                {displayName}
-              </p>
-              <p className="uppercase">{displayRole}</p>
-              <p className="truncate">Username: {user?.username ?? "pending"}</p>
-              <p className="truncate">Insurance ID: {insuranceId}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-white/[0.03]">
           <button
             type="button"
             onClick={() => setProfileOpen((v) => !v)}
-            className="flex w-full items-center justify-between px-3 py-2.5 text-left"
+            className="flex w-full items-center justify-between px-3 py-3 text-left"
           >
-            <div>
-              <p className="truncate text-sm font-semibold uppercase tracking-wide text-sidebar-foreground">
-                {displayName}
-              </p>
-              <p className="truncate text-xs text-sidebar-muted">{displayEmail}</p>
-              <p className="mt-0.5 text-xs capitalize text-sidebar-muted">{displayRole}</p>
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary/40 text-sm font-semibold text-primary">
+                {firstLetter}
+              </div>
+              <div className="min-w-0 text-xs text-sidebar-muted">
+                <p className="truncate text-sm font-semibold uppercase tracking-wide text-sidebar-foreground">
+                  {displayName}
+                </p>
+                <p className="uppercase">{displayRole}</p>
+                <p className="truncate">Username: {user?.username ?? "pending"}</p>
+                <p className="truncate">Insurance ID: {insuranceId}</p>
+              </div>
             </div>
             <ChevronDown className={cn("h-4 w-4 text-sidebar-muted transition-transform", profileOpen && "rotate-180")} />
           </button>
@@ -260,6 +250,7 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
             )}
           >
             <div className="overflow-hidden p-2 space-y-1">
+              <p className="truncate px-2 text-xs text-sidebar-muted">{displayEmail}</p>
               <Link
                 href="/settings"
                 className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground transition-colors"
