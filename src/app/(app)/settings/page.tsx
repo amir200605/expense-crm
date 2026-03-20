@@ -11,7 +11,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface IntegrationsConfig {
-  telnyx?: { apiKey?: string; fromNumber?: string };
+  /** From number in DB; API key is TELNYX_API_KEY on the server */
+  telnyx?: { fromNumber?: string };
   outlook?: { fromEmail?: string; smtpUser?: string; smtpPass?: string };
 }
 
@@ -257,7 +258,6 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [billingEmail, setBillingEmail] = useState("");
   const [saved, setSaved] = useState(false);
-  const [telnyxApiKey, setTelnyxApiKey] = useState("");
   const [telnyxFromNumber, setTelnyxFromNumber] = useState("");
   const [outlookFromEmail, setOutlookFromEmail] = useState("");
   const [outlookSmtpUser, setOutlookSmtpUser] = useState("");
@@ -277,7 +277,6 @@ export default function SettingsPage() {
       setName(data.agency.name);
       setBillingEmail(data.agency.billingEmail ?? "");
       const int = data.agency.integrations ?? {};
-      setTelnyxApiKey(int.telnyx?.apiKey ?? "");
       setTelnyxFromNumber(int.telnyx?.fromNumber ?? "");
       setOutlookFromEmail(int.outlook?.fromEmail ?? "");
       setOutlookSmtpUser(int.outlook?.smtpUser ?? "");
@@ -331,9 +330,7 @@ export default function SettingsPage() {
   function handleIntegrationsSubmit(e: React.FormEvent) {
     e.preventDefault();
     integrationsMutation.mutate({
-      telnyx: telnyxApiKey || telnyxFromNumber
-        ? { apiKey: telnyxApiKey || undefined, fromNumber: telnyxFromNumber || undefined }
-        : undefined,
+      telnyx: { fromNumber: telnyxFromNumber.trim() },
       outlook: outlookFromEmail || outlookSmtpUser || outlookSmtpPass
         ? { fromEmail: outlookFromEmail || undefined, smtpUser: outlookSmtpUser || undefined, smtpPass: outlookSmtpPass || undefined }
         : undefined,
@@ -418,35 +415,28 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Integrations</CardTitle>
             <CardDescription>
-              Configure <strong>SMS</strong> and <strong>Email (Outlook)</strong> so automations can send real messages. Leave blank to only log actions (no messages sent).
+              Configure <strong>SMS</strong> and <strong>Email (Outlook)</strong> so automations can send real messages. Leave blank to only log actions (no messages sent).{" "}
+              <span className="text-muted-foreground">
+                Telnyx API key is set on the server as <code className="text-xs">TELNYX_API_KEY</code> in <code className="text-xs">.env</code> (not stored in the app).
+              </span>
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleIntegrationsSubmit} className="space-y-6">
               <div className="space-y-4">
-                <h4 className="text-sm font-medium">SMS</h4>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="telnyx-api-key">API Key</Label>
-                    <Input
-                      id="telnyx-api-key"
-                      type="password"
-                      value={telnyxApiKey}
-                      onChange={(e) => setTelnyxApiKey(e.target.value)}
-                      placeholder="KEYxxxxxxxx..."
-                      disabled={!canEdit}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="telnyx-from">From number</Label>
-                    <Input
-                      id="telnyx-from"
-                      value={telnyxFromNumber}
-                      onChange={(e) => setTelnyxFromNumber(e.target.value)}
-                      placeholder="+1234567890"
-                      disabled={!canEdit}
-                    />
-                  </div>
+                <h4 className="text-sm font-medium">SMS (Telnyx)</h4>
+                <p className="text-xs text-muted-foreground">
+                  Set the API key in your environment as <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> and redeploy. Only the sending number is saved here.
+                </p>
+                <div className="max-w-md space-y-1.5">
+                  <Label htmlFor="telnyx-from">From number</Label>
+                  <Input
+                    id="telnyx-from"
+                    value={telnyxFromNumber}
+                    onChange={(e) => setTelnyxFromNumber(e.target.value)}
+                    placeholder="+1234567890"
+                    disabled={!canEdit}
+                  />
                 </div>
               </div>
 

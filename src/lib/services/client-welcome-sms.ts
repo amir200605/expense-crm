@@ -1,5 +1,6 @@
 import Telnyx from "telnyx";
 import { prisma } from "@/lib/db";
+import { getTelnyxApiKey } from "@/lib/telnyx-env";
 
 type PolicyLike = {
   carrier?: string | null;
@@ -63,8 +64,9 @@ export async function sendClientWelcomeSms(params: {
   const settings = (agency?.settings as Record<string, unknown>) ?? {};
   const integrations = (settings.integrations as Record<string, Record<string, string>>) ?? {};
   const telnyxConfig = integrations.telnyx ?? {};
+  const apiKey = getTelnyxApiKey();
 
-  if (!telnyxConfig.apiKey || !telnyxConfig.fromNumber || !params.client.phone?.trim()) {
+  if (!apiKey || !telnyxConfig.fromNumber || !params.client.phone?.trim()) {
     return { sent: false, reason: "missing_telnyx_or_phone" as const };
   }
 
@@ -107,7 +109,7 @@ InstaBrain 1-800-806-9714
 Mutual of Omaha 800-775-7896
 TransAmerica 877-234-4848`;
 
-  const telnyx = new Telnyx({ apiKey: telnyxConfig.apiKey });
+  const telnyx = new Telnyx({ apiKey });
   await telnyx.messages.send({
     from: telnyxConfig.fromNumber,
     to: params.client.phone,

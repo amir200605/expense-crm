@@ -9,9 +9,9 @@ const MASK = "••••••••";
 function maskIntegrations(raw: Record<string, Record<string, string>> | undefined) {
   if (!raw) return {};
   return {
+    /** SMS API key lives in TELNYX_API_KEY env only — not stored in DB */
     telnyx: raw.telnyx
       ? {
-          apiKey: raw.telnyx.apiKey ? MASK : "",
           fromNumber: raw.telnyx.fromNumber ?? "",
         }
       : {},
@@ -91,13 +91,12 @@ export async function PATCH(req: Request) {
     const current = (agencyRow?.settings as Record<string, Record<string, Record<string, string>>>) ?? {};
     const curInt = current.integrations ?? {};
     const newInt = body.integrations as Record<string, Record<string, string>>;
+    const curTelnyxClean = curInt.telnyx ? { fromNumber: curInt.telnyx.fromNumber ?? "" } : {};
     const merged = {
-      telnyx: newInt.telnyx
-        ? {
-            apiKey: newInt.telnyx.apiKey && newInt.telnyx.apiKey !== MASK ? newInt.telnyx.apiKey : (curInt.telnyx?.apiKey ?? ""),
-            fromNumber: newInt.telnyx.fromNumber ?? curInt.telnyx?.fromNumber ?? "",
-          }
-        : curInt.telnyx ?? {},
+      telnyx:
+        newInt.telnyx !== undefined && newInt.telnyx !== null
+          ? { fromNumber: newInt.telnyx.fromNumber ?? curInt.telnyx?.fromNumber ?? "" }
+          : curTelnyxClean,
       outlook: newInt.outlook
         ? {
             fromEmail: newInt.outlook.fromEmail ?? curInt.outlook?.fromEmail ?? "",

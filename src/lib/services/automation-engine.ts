@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import type { AutomationTrigger, LeadDisposition, PipelineStage } from "@prisma/client";
 import Telnyx from "telnyx";
 import nodemailer from "nodemailer";
+import { getTelnyxApiKey } from "@/lib/telnyx-env";
 
 interface ActionNode {
   id: string;
@@ -23,7 +24,8 @@ interface TriggerContext {
 }
 
 interface IntegrationsConfig {
-  telnyx?: { apiKey?: string; fromNumber?: string };
+  /** fromNumber in DB; API key from TELNYX_API_KEY */
+  telnyx?: { fromNumber?: string };
   outlook?: { fromEmail?: string; smtpUser?: string; smtpPass?: string };
 }
 
@@ -331,8 +333,9 @@ async function executeAction(action: ActionNode, ctx: TriggerContext, integratio
       const message = (c.message as string) ?? "";
       if (smsTo && message) {
         const telnyxConfig = integrations.telnyx;
-        if (telnyxConfig?.apiKey && telnyxConfig?.fromNumber) {
-          const client = new Telnyx({ apiKey: telnyxConfig.apiKey });
+        const apiKey = getTelnyxApiKey();
+        if (apiKey && telnyxConfig?.fromNumber) {
+          const client = new Telnyx({ apiKey });
           await client.messages.send({
             from: telnyxConfig.fromNumber,
             to: smsTo,
@@ -341,13 +344,15 @@ async function executeAction(action: ActionNode, ctx: TriggerContext, integratio
         }
       }
       if (ctx.leadId) {
+        const sent =
+          !!(getTelnyxApiKey() && integrations.telnyx?.fromNumber && smsTo && message);
         await prisma.activityLog.create({
           data: {
             userId: ctx.userId,
             action: "SMS_SENT",
             entityType: "Lead",
             entityId: ctx.leadId,
-            newValue: { to: smsTo ?? undefined, message, sendTo, sent: !!integrations.telnyx?.apiKey },
+            newValue: { to: smsTo ?? undefined, message, sendTo, sent },
           },
         });
       }
