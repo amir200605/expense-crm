@@ -48,7 +48,10 @@ export async function POST(req: Request) {
   const apiKey = getTelnyxApiKey();
   if (!apiKey) {
     return NextResponse.json(
-      { error: "TELNYX_API_KEY is not set in server environment (.env)." },
+      {
+        error:
+          "TELNYX_API_KEY is missing. Add it to .env.local in the project root (same folder as package.json), e.g. TELNYX_API_KEY=key_xxx — no spaces around =. Restart the dev server after saving. If you deployed the app, set TELNYX_API_KEY in your host’s environment variables (Netlify/Railway/etc.) and redeploy.",
+      },
       { status: 400 }
     );
   }

@@ -465,7 +465,7 @@ export default function SettingsPage() {
                 <div className="space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
                   <p className="text-sm font-medium">Send test SMS</p>
                   <p className="text-xs text-muted-foreground">
-                    Uses <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> from the server and the From number above (save integrations first). Sends a short test message.
+                    Uses <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> from <code className="rounded bg-muted px-1">.env.local</code> or <code className="rounded bg-muted px-1">.env</code> at the project root, and the From number above (save integrations first). Restart the dev server after editing env files. On production, set the variable in your host&apos;s dashboard.
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
