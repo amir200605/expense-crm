@@ -101,6 +101,7 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
   }, []);
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(initialOpen);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     const group = getGroupContainingPath(pathname);
@@ -238,29 +239,43 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
         </div>
 
         <div className="rounded-xl border border-white/10 bg-white/[0.03]">
-          <div className="px-3 py-2.5">
-            <p className="truncate text-sm font-semibold uppercase tracking-wide text-sidebar-foreground">
-              {displayName}
-            </p>
-            <p className="truncate text-xs text-sidebar-muted">{displayEmail}</p>
-            <p className="mt-0.5 text-xs capitalize text-sidebar-muted">{displayRole}</p>
-          </div>
-          <div className="border-t border-white/10 p-2 space-y-1">
-            <Link
-              href="/settings"
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground transition-colors"
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Link>
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </button>
+          <button
+            type="button"
+            onClick={() => setProfileOpen((v) => !v)}
+            className="flex w-full items-center justify-between px-3 py-2.5 text-left"
+          >
+            <div>
+              <p className="truncate text-sm font-semibold uppercase tracking-wide text-sidebar-foreground">
+                {displayName}
+              </p>
+              <p className="truncate text-xs text-sidebar-muted">{displayEmail}</p>
+              <p className="mt-0.5 text-xs capitalize text-sidebar-muted">{displayRole}</p>
+            </div>
+            <ChevronDown className={cn("h-4 w-4 text-sidebar-muted transition-transform", profileOpen && "rotate-180")} />
+          </button>
+          <div
+            className={cn(
+              "grid transition-[grid-template-rows] duration-200 ease-out border-t border-white/10",
+              profileOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+            )}
+          >
+            <div className="overflow-hidden p-2 space-y-1">
+              <Link
+                href="/settings"
+                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground transition-colors"
+              >
+                <Settings className="h-4 w-4" />
+                Settings
+              </Link>
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </button>
+            </div>
           </div>
         </div>
       </div>
