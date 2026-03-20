@@ -243,13 +243,8 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
             </div>
             <ChevronDown className={cn("h-4 w-4 text-sidebar-muted transition-transform", profileOpen && "rotate-180")} />
           </button>
-          <div
-            className={cn(
-              "grid transition-[grid-template-rows] duration-200 ease-out border-t border-white/10",
-              profileOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-            )}
-          >
-            <div className="overflow-hidden p-2 space-y-1">
+          {profileOpen && (
+            <div className="border-t border-white/10 p-2 space-y-1">
               <p className="truncate px-2 text-xs text-sidebar-muted">{displayEmail}</p>
               <Link
                 href="/settings"
@@ -267,7 +262,7 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
                 Sign out
               </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </aside>
