@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/permissions";
 import {
@@ -23,6 +24,7 @@ import {
   Settings,
   Shield,
   ChevronDown,
+  LogOut,
 } from "lucide-react";
 
 type NavItem = { href: string; label: string; icon: React.ElementType; roles?: string[] };
@@ -113,7 +115,11 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
       return next;
     });
   };
-  const sidebarUsername = user?.username?.trim() || user?.email?.split("@")[0] || "user";
+  const displayName = user?.name?.trim() || user?.username?.trim() || "User";
+  const displayEmail = user?.email?.trim() || "—";
+  const displayRole = user?.role ? user.role.replace(/_/g, " ").toLowerCase() : "user";
+  const insuranceId = user?.id ? user.id.slice(0, 8).toUpperCase() : "pending";
+  const firstLetter = (displayName.charAt(0) || "U").toUpperCase();
 
   return (
     <aside className="sidebar-dark flex h-full w-56 flex-col">
@@ -212,8 +218,51 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
         })}
       </nav>
       <div className="border-t border-white/10 p-3">
-        <p className="text-[11px] uppercase tracking-wider text-sidebar-muted">Username</p>
-        <p className="mt-1 truncate text-sm font-medium text-sidebar-foreground">@{sidebarUsername}</p>
+        <div className="mb-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+          <div className="bg-primary px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary-foreground">
+            Prime Insurance Agency
+          </div>
+          <div className="flex items-start gap-3 px-3 py-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-primary/40 text-sm font-semibold text-primary">
+              {firstLetter}
+            </div>
+            <div className="min-w-0 text-xs text-sidebar-muted">
+              <p className="truncate text-sm font-semibold uppercase tracking-wide text-sidebar-foreground">
+                {displayName}
+              </p>
+              <p className="uppercase">{displayRole}</p>
+              <p className="truncate">Username: {user?.username ?? "pending"}</p>
+              <p className="truncate">Insurance ID: {insuranceId}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-white/[0.03]">
+          <div className="px-3 py-2.5">
+            <p className="truncate text-sm font-semibold uppercase tracking-wide text-sidebar-foreground">
+              {displayName}
+            </p>
+            <p className="truncate text-xs text-sidebar-muted">{displayEmail}</p>
+            <p className="mt-0.5 text-xs capitalize text-sidebar-muted">{displayRole}</p>
+          </div>
+          <div className="border-t border-white/10 p-2 space-y-1">
+            <Link
+              href="/settings"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground transition-colors"
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </Link>
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </button>
+          </div>
+        </div>
       </div>
     </aside>
   );

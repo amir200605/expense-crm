@@ -99,12 +99,12 @@ export function Navbar({ user }: { user: SessionUser }) {
       </div>
 
       {/* Breadcrumbs (center on small, left after brand on large) */}
-      <div className="flex-1 min-w-0 lg:flex-none">
+      <div className="min-w-0 lg:flex-none">
         <AppBreadcrumbs variant="dark" />
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1">
+      <div className="ml-auto flex items-center gap-1">
         <div className="hidden md:flex items-center rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/90">
           Insurance ID: {insuranceId}
         </div>
