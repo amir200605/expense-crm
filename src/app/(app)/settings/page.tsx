@@ -24,6 +24,12 @@ interface AgencySettings {
   integrations?: IntegrationsConfig;
 }
 
+interface IntegrationsMeta {
+  telnyxApiKeyConfigured: boolean;
+  telnyxFromNumberSaved: boolean;
+  replit: boolean;
+}
+
 interface MeUser {
   id: string;
   name: string;
@@ -32,7 +38,7 @@ interface MeUser {
   role: string;
 }
 
-async function fetchSettings(): Promise<{ agency: AgencySettings }> {
+async function fetchSettings(): Promise<{ agency: AgencySettings; integrationsMeta?: IntegrationsMeta }> {
   const res = await fetch("/api/settings");
   if (!res.ok) throw new Error("Failed to load settings");
   return res.json();
@@ -331,14 +337,26 @@ export default function SettingsPage() {
 
   const testSmsMutation = useMutation({
     mutationFn: async (to: string) => {
-      const res = await fetch("/api/settings/test-sms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Failed to send");
-      return data;
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 45_000);
+      try {
+        const res = await fetch("/api/settings/test-sms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to }),
+          signal: controller.signal,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error ?? "Failed to send");
+        return data;
+      } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") {
+          throw new Error("Request timed out after 45s. Check Replit Secrets, From number, and try again.");
+        }
+        throw e;
+      } finally {
+        clearTimeout(t);
+      }
     },
     onSuccess: (data) => {
       setTestSmsResult({ ok: true, message: data.message ?? "Sent!" });
@@ -439,16 +457,45 @@ export default function SettingsPage() {
             <CardDescription>
               Configure <strong>SMS</strong> and <strong>Email (Outlook)</strong> so automations can send real messages. Leave blank to only log actions (no messages sent).{" "}
               <span className="text-muted-foreground">
-                Telnyx API key is set on the server as <code className="text-xs">TELNYX_API_KEY</code> in <code className="text-xs">.env</code> (not stored in the app).
+                Telnyx API key is <code className="text-xs">TELNYX_API_KEY</code> in server env / Replit Secrets (not stored in the app).
               </span>
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {data?.integrationsMeta && (
+              <div className="mb-6 space-y-2 rounded-lg border border-border/80 bg-muted/20 p-4 text-sm">
+                <p className="font-medium">SMS readiness (what the server sees)</p>
+                <ul className="list-inside list-disc space-y-1 text-muted-foreground">
+                  <li>
+                    <span className="text-foreground">TELNYX_API_KEY:</span>{" "}
+                    {data.integrationsMeta.telnyxApiKeyConfigured ? (
+                      <span className="font-medium text-green-600">configured</span>
+                    ) : (
+                      <span className="font-medium text-destructive">missing</span>
+                    )}
+                  </li>
+                  <li>
+                    <span className="text-foreground">From number (saved in app):</span>{" "}
+                    {data.integrationsMeta.telnyxFromNumberSaved ? (
+                      <span className="font-medium text-green-600">saved — use Save integrations if you just changed it</span>
+                    ) : (
+                      <span className="font-medium text-amber-600">not saved yet</span>
+                    )}
+                  </li>
+                </ul>
+                {data.integrationsMeta.replit && (
+                  <p className="mt-2 text-xs text-foreground">
+                    <strong>Replit:</strong> add a Secret named exactly <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> (Tools → Secrets / lock icon). For{" "}
+                    <strong>Published Deployments</strong>, add the same secret under Deployment secrets and redeploy. Then <strong>Stop</strong> and <strong>Run</strong> the Repl.
+                  </p>
+                )}
+              </div>
+            )}
             <form onSubmit={handleIntegrationsSubmit} className="space-y-6">
               <div className="space-y-4">
                 <h4 className="text-sm font-medium">SMS (Telnyx)</h4>
                 <p className="text-xs text-muted-foreground">
-                  Set the API key in your environment as <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> and redeploy. Only the sending number is saved here. In Telnyx, that number must be assigned to a{" "}
+                  Set the API key via <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> in your host env or Replit Secrets, then redeploy or restart. Only the sending number is saved here. In Telnyx, that number must be assigned to a{" "}
                   <strong>messaging profile</strong> (Mission Control → Numbers). If Telnyx still asks for a profile in the API, add{" "}
                   <code className="rounded bg-muted px-1">TELNYX_MESSAGING_PROFILE_ID</code> to your server env.
                 </p>
@@ -465,7 +512,15 @@ export default function SettingsPage() {
                 <div className="space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
                   <p className="text-sm font-medium">Send test SMS</p>
                   <p className="text-xs text-muted-foreground">
-                    Uses <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> from <code className="rounded bg-muted px-1">.env.local</code> or <code className="rounded bg-muted px-1">.env</code> at the project root, and the From number above (save integrations first). Restart the dev server after editing env files. On production, set the variable in your host&apos;s dashboard.
+                    {data?.integrationsMeta?.replit ? (
+                      <>
+                        Uses <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> from Replit <strong>Secrets</strong> and the From number above (click <strong>Save integrations</strong> first). Phone must be E.164, e.g. <code className="rounded bg-muted px-1">+15614515321</code>.
+                      </>
+                    ) : (
+                      <>
+                        Uses <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> from <code className="rounded bg-muted px-1">.env.local</code> or <code className="rounded bg-muted px-1">.env</code> at the project root, and the From number above (save integrations first). Restart the dev server after editing env files.
+                      </>
+                    )}
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <Input

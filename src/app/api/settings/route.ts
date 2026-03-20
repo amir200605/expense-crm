@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/permissions";
+import { getTelnyxApiKey } from "@/lib/telnyx-env";
 
 const MASK = "••••••••";
 
@@ -46,6 +47,9 @@ export async function GET() {
 
   const settings = (agency.settings as Record<string, unknown>) ?? {};
   const integrations = maskIntegrations(settings.integrations as Record<string, Record<string, string>>);
+  const rawTelnyx = (settings.integrations as Record<string, Record<string, string>> | undefined)?.telnyx;
+  const fromSaved = Boolean(rawTelnyx?.fromNumber?.trim());
+
   return NextResponse.json({
     agency: {
       id: agency.id,
@@ -53,6 +57,11 @@ export async function GET() {
       billingEmail: agency.billingEmail,
       slug: agency.slug,
       integrations,
+    },
+    integrationsMeta: {
+      telnyxApiKeyConfigured: Boolean(getTelnyxApiKey()),
+      telnyxFromNumberSaved: fromSaved,
+      replit: Boolean(process.env.REPL_ID ?? process.env.REPL_SLUG),
     },
   });
 }
@@ -116,6 +125,9 @@ export async function PATCH(req: Request) {
 
   const settings = (agency.settings as Record<string, unknown>) ?? {};
   const integrations = maskIntegrations(settings.integrations as Record<string, Record<string, string>>);
+  const rawTelnyxPatch = (settings.integrations as Record<string, Record<string, string>> | undefined)?.telnyx;
+  const fromSavedPatch = Boolean(rawTelnyxPatch?.fromNumber?.trim());
+
   return NextResponse.json({
     agency: {
       id: agency.id,
@@ -123,6 +135,11 @@ export async function PATCH(req: Request) {
       billingEmail: agency.billingEmail,
       slug: agency.slug,
       integrations,
+    },
+    integrationsMeta: {
+      telnyxApiKeyConfigured: Boolean(getTelnyxApiKey()),
+      telnyxFromNumberSaved: fromSavedPatch,
+      replit: Boolean(process.env.REPL_ID ?? process.env.REPL_SLUG),
     },
   });
 }
