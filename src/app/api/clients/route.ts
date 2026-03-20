@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { listClients } from "@/lib/services/client.service";
-import { sendClientWelcomeSms } from "@/lib/services/client-welcome-sms";
 import { listClientsQuerySchema } from "@/lib/validations/client";
 import type { SessionUser } from "@/lib/permissions";
-import { prisma } from "@/lib/db";
+import { runClientWelcomeSmsAfterCreate } from "@/lib/services/trigger-client-welcome-sms";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -39,38 +38,21 @@ export async function POST(req: Request) {
   const { createClient } = await import("@/lib/services/client.service");
   const client = await createClient(agencyId, parsed.data, parsed.data.linkedLeadId);
 
-  // Auto-send welcome SMS when a client is added (if Telnyx is configured).
-  try {
-    const latestPolicy = await prisma.policy.findFirst({
-      where: { clientId: client.id },
-      orderBy: { createdAt: "desc" },
-      select: {
-        carrier: true,
-        policyNumber: true,
-        faceAmount: true,
-        premium: true,
-        paymentDraftDate: true,
-      },
-    });
-    await sendClientWelcomeSms({
-      agencyId,
-      client: {
-        firstName: client.firstName,
-        lastName: client.lastName,
-        phone: client.phone,
-        carrier: client.carrier,
-        premiumAmount: client.premiumAmount,
-      },
-      policy: latestPolicy,
-      agentName: user.name ?? user.email ?? "your life insurance agent",
-      logToLead:
-        parsed.data.linkedLeadId && user.id
-          ? { leadId: parsed.data.linkedLeadId, userId: user.id }
-          : undefined,
-    });
-  } catch (smsError) {
-    console.error("[clients] welcome SMS send failed:", smsError);
-  }
+  await runClientWelcomeSmsAfterCreate({
+    agencyId,
+    client: {
+      id: client.id,
+      firstName: client.firstName,
+      lastName: client.lastName,
+      phone: client.phone,
+      carrier: client.carrier,
+      premiumAmount: client.premiumAmount,
+    },
+    linkedLeadId: parsed.data.linkedLeadId,
+    userId: user.id,
+    userName: user.name ?? null,
+    userEmail: user.email ?? null,
+  });
 
   return NextResponse.json(client, { status: 201 });
 }

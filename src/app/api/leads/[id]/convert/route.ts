@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { canEditLead } from "@/lib/permissions";
 import { getLeadById } from "@/lib/services/lead.service";
 import { createClient } from "@/lib/services/client.service";
+import { runClientWelcomeSmsAfterCreate } from "@/lib/services/trigger-client-welcome-sms";
 import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/permissions";
 
@@ -17,6 +18,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (lead.client) {
     return NextResponse.json({ client: lead.client }, { status: 200 });
   }
+  const user = session.user as SessionUser;
   const client = await createClient(lead.agencyId, {
     firstName: lead.firstName,
     lastName: lead.lastName,
@@ -32,6 +34,23 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     notes: lead.notes ?? undefined,
     linkedLeadId: leadId,
   }, leadId);
+
+  await runClientWelcomeSmsAfterCreate({
+    agencyId: lead.agencyId,
+    client: {
+      id: client.id,
+      firstName: client.firstName,
+      lastName: client.lastName,
+      phone: client.phone,
+      carrier: client.carrier,
+      premiumAmount: client.premiumAmount,
+    },
+    linkedLeadId: leadId,
+    userId: user.id,
+    userName: user.name ?? null,
+    userEmail: user.email ?? null,
+  });
+
   await prisma.lead.update({
     where: { id: leadId },
     data: { disposition: "SOLD", pipelineStage: "PLACED" },

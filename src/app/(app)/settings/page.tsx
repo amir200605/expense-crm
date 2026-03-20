@@ -265,6 +265,8 @@ export default function SettingsPage() {
   const [integrationsSaved, setIntegrationsSaved] = useState(false);
   const [testEmailTo, setTestEmailTo] = useState("");
   const [testEmailResult, setTestEmailResult] = useState<{ ok: boolean; message?: string } | null>(null);
+  const [testSmsTo, setTestSmsTo] = useState("");
+  const [testSmsResult, setTestSmsResult] = useState<{ ok: boolean; message?: string } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["settings"],
@@ -324,6 +326,26 @@ export default function SettingsPage() {
     },
     onError: (err: Error) => {
       setTestEmailResult({ ok: false, message: err.message });
+    },
+  });
+
+  const testSmsMutation = useMutation({
+    mutationFn: async (to: string) => {
+      const res = await fetch("/api/settings/test-sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Failed to send");
+      return data;
+    },
+    onSuccess: (data) => {
+      setTestSmsResult({ ok: true, message: data.message ?? "Sent!" });
+      setTimeout(() => setTestSmsResult(null), 5000);
+    },
+    onError: (err: Error) => {
+      setTestSmsResult({ ok: false, message: err.message });
     },
   });
 
@@ -439,6 +461,35 @@ export default function SettingsPage() {
                     placeholder="+1234567890"
                     disabled={!canEdit}
                   />
+                </div>
+                <div className="space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
+                  <p className="text-sm font-medium">Send test SMS</p>
+                  <p className="text-xs text-muted-foreground">
+                    Uses <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> from the server and the From number above (save integrations first). Sends a short test message.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      type="tel"
+                      placeholder="+15551234567"
+                      value={testSmsTo}
+                      onChange={(e) => setTestSmsTo(e.target.value)}
+                      className="max-w-xs"
+                      disabled={!canEdit}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => testSmsTo.trim() && testSmsMutation.mutate(testSmsTo.trim())}
+                      disabled={!canEdit || testSmsMutation.isPending || !testSmsTo.trim()}
+                    >
+                      {testSmsMutation.isPending ? "Sending…" : "Send test SMS"}
+                    </Button>
+                  </div>
+                  {testSmsResult && (
+                    <p className={testSmsResult.ok ? "text-sm text-green-600" : "text-sm text-destructive"}>
+                      {testSmsResult.message}
+                    </p>
+                  )}
                 </div>
               </div>
 
