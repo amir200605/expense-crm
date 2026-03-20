@@ -1,6 +1,6 @@
 import Telnyx from "telnyx";
 import { prisma } from "@/lib/db";
-import { getTelnyxApiKey } from "@/lib/telnyx-env";
+import { buildTelnyxSendParams, getTelnyxApiKey } from "@/lib/telnyx-env";
 
 type PolicyLike = {
   carrier?: string | null;
@@ -110,11 +110,13 @@ Mutual of Omaha 800-775-7896
 TransAmerica 877-234-4848`;
 
   const telnyx = new Telnyx({ apiKey });
-  await telnyx.messages.send({
-    from: telnyxConfig.fromNumber,
-    to: params.client.phone,
-    text: message,
-  });
+  await telnyx.messages.send(
+    buildTelnyxSendParams({
+      from: telnyxConfig.fromNumber,
+      to: params.client.phone,
+      text: message,
+    }) as Parameters<typeof telnyx.messages.send>[0],
+  );
 
   return { sent: true as const };
 }

@@ -426,7 +426,9 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <h4 className="text-sm font-medium">SMS (Telnyx)</h4>
                 <p className="text-xs text-muted-foreground">
-                  Set the API key in your environment as <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> and redeploy. Only the sending number is saved here.
+                  Set the API key in your environment as <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> and redeploy. Only the sending number is saved here. In Telnyx, that number must be assigned to a{" "}
+                  <strong>messaging profile</strong> (Mission Control → Numbers). If Telnyx still asks for a profile in the API, add{" "}
+                  <code className="rounded bg-muted px-1">TELNYX_MESSAGING_PROFILE_ID</code> to your server env.
                 </p>
                 <div className="max-w-md space-y-1.5">
                   <Label htmlFor="telnyx-from">From number</Label>

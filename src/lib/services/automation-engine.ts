@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import type { AutomationTrigger, LeadDisposition, PipelineStage } from "@prisma/client";
 import Telnyx from "telnyx";
 import nodemailer from "nodemailer";
-import { getTelnyxApiKey } from "@/lib/telnyx-env";
+import { buildTelnyxSendParams, getTelnyxApiKey } from "@/lib/telnyx-env";
 
 interface ActionNode {
   id: string;
@@ -336,11 +336,13 @@ async function executeAction(action: ActionNode, ctx: TriggerContext, integratio
         const apiKey = getTelnyxApiKey();
         if (apiKey && telnyxConfig?.fromNumber) {
           const client = new Telnyx({ apiKey });
-          await client.messages.send({
-            from: telnyxConfig.fromNumber,
-            to: smsTo,
-            text: message,
-          });
+          await client.messages.send(
+            buildTelnyxSendParams({
+              from: telnyxConfig.fromNumber,
+              to: smsTo,
+              text: message,
+            }) as Parameters<typeof client.messages.send>[0],
+          );
         }
       }
       if (ctx.leadId) {
