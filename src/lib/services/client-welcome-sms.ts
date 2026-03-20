@@ -52,6 +52,33 @@ function getCarrierServiceNumber(carrier: string | null | undefined): string {
   return `Carrier customer service number: ${match?.[1] ?? "N/A"}`;
 }
 
+async function logWelcomeSmsOnLead(params: {
+  logToLead?: { leadId: string; userId: string | null };
+  to: string | null;
+  body: string;
+  sent: boolean;
+}) {
+  if (!params.logToLead?.leadId) return;
+  await prisma.activityLog.create({
+    data: {
+      userId: params.logToLead.userId,
+      action: "SMS_SENT",
+      entityType: "Lead",
+      entityId: params.logToLead.leadId,
+      newValue: {
+        to: params.to,
+        message: params.body,
+        sent: params.sent,
+        source: "client_welcome",
+      },
+    },
+  });
+}
+
+export type SendClientWelcomeSmsResult =
+  | { sent: true }
+  | { sent: false; reason: "missing_telnyx_or_phone" | "telnyx_api_error"; detail?: string };
+
 export async function sendClientWelcomeSms(params: {
   agencyId: string;
   client: ClientLike;
@@ -69,9 +96,21 @@ export async function sendClientWelcomeSms(params: {
   const telnyxConfig = integrations.telnyx ?? {};
   const fromNumber = resolveTelnyxFromNumber(telnyxConfig.fromNumber);
   const apiKey = getTelnyxApiKey();
+  const phone = params.client.phone?.trim() ?? "";
 
-  if (!apiKey || !fromNumber || !params.client.phone?.trim()) {
-    return { sent: false, reason: "missing_telnyx_or_phone" as const };
+  if (!apiKey || !fromNumber || !phone) {
+    const explanation = !apiKey
+      ? "Telnyx API key is not set. Add TELNYX_API_KEY in your host secrets (e.g. Replit) and/or configure it under Settings → Integrations."
+      : !fromNumber
+        ? "SMS “From” number is not set. Add it under Settings → Integrations (Telnyx) or set TELNYX_FROM_NUMBER in environment."
+        : "This client has no phone number, so no welcome SMS was sent.";
+    await logWelcomeSmsOnLead({
+      logToLead: params.logToLead,
+      to: phone || null,
+      body: `Welcome SMS was not sent. ${explanation}`,
+      sent: false,
+    });
+    return { sent: false, reason: "missing_telnyx_or_phone" };
   }
 
   const clientName = `${params.client.firstName} ${params.client.lastName}`.trim();
@@ -114,30 +153,31 @@ Mutual of Omaha 800-775-7896
 TransAmerica 877-234-4848`;
 
   const telnyx = new Telnyx({ apiKey });
-  await telnyx.messages.send(
-    buildTelnyxSendParams({
-      from: fromNumber,
-      to: params.client.phone,
-      text: message,
-    }) as Parameters<typeof telnyx.messages.send>[0],
-  );
-
-  if (params.logToLead?.leadId) {
-    await prisma.activityLog.create({
-      data: {
-        userId: params.logToLead.userId,
-        action: "SMS_SENT",
-        entityType: "Lead",
-        entityId: params.logToLead.leadId,
-        newValue: {
-          to: params.client.phone,
-          message,
-          sent: true,
-          source: "client_welcome",
-        },
-      },
+  try {
+    await telnyx.messages.send(
+      buildTelnyxSendParams({
+        from: fromNumber,
+        to: phone,
+        text: message,
+      }) as Parameters<typeof telnyx.messages.send>[0],
+    );
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e);
+    await logWelcomeSmsOnLead({
+      logToLead: params.logToLead,
+      to: phone,
+      body: `Welcome SMS failed to send (Telnyx error): ${detail}`,
+      sent: false,
     });
+    return { sent: false, reason: "telnyx_api_error", detail };
   }
 
-  return { sent: true as const };
+  await logWelcomeSmsOnLead({
+    logToLead: params.logToLead,
+    to: phone,
+    body: message,
+    sent: true,
+  });
+
+  return { sent: true };
 }

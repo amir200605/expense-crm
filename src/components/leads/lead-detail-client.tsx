@@ -135,6 +135,7 @@ export function LeadDetailClient({
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["lead", leadId] });
+      queryClient.invalidateQueries({ queryKey: ["lead-sms", leadId] });
       if (data?.client?.id) router.push(`/clients/${data.client.id}`);
     },
   });
@@ -369,7 +370,10 @@ export function LeadDetailClient({
             <CardHeader>
               <CardTitle>Text messages (SMS)</CardTitle>
               <CardDescription>
-                Outbound SMS tied to this lead (automations, and welcome SMS when the lead was converted to a client with Telnyx configured).
+                Outbound SMS tied to this lead (automations and welcome SMS on convert). Welcome SMS requires{" "}
+                <strong>Telnyx</strong> (<code className="text-xs">TELNYX_API_KEY</code> and a From number in Settings →
+                Integrations). If something was skipped or failed, you&apos;ll see a &quot;Not sent&quot; entry with the
+                reason.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
