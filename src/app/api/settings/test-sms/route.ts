@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          "TELNYX_API_KEY is missing. Add it to .env.local in the project root (same folder as package.json), e.g. TELNYX_API_KEY=key_xxx — no spaces around =. Restart the dev server after saving. If you deployed the app, set TELNYX_API_KEY in your host’s environment variables (Netlify/Railway/etc.) and redeploy.",
+          "TELNYX_API_KEY is missing. In the project root (next to package.json), add to .env.local or .env: TELNYX_API_KEY=your_key (no spaces around =). Restart the dev server. If deployed, set the variable in your host’s dashboard and redeploy.",
       },
       { status: 400 }
     );

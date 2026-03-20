@@ -1,4 +1,6 @@
 import { loadEnvConfig } from "@next/env";
+import fs from "node:fs";
+import path from "node:path";
 
 // Load .env / .env.local from project root (idempotent; helps server code see vars consistently)
 if (typeof process !== "undefined") {
@@ -16,6 +18,40 @@ function readServerEnv(name: string): string | undefined {
 }
 
 /**
+ * If process.env is empty (some dev setups), read the key from .env.local / .env on disk (Node only).
+ */
+function readEnvFileValue(key: string): string | undefined {
+  if (typeof process === "undefined" || !process.versions?.node) return undefined;
+  const root = process.cwd();
+  for (const file of [".env.local", ".env"]) {
+    const fp = path.join(root, file);
+    if (!fs.existsSync(fp)) continue;
+    let text: string;
+    try {
+      text = fs.readFileSync(fp, "utf8");
+    } catch {
+      continue;
+    }
+    for (const line of text.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const m = trimmed.match(new RegExp(`^${key}\\s*=\\s*(.*)$`));
+      if (!m) continue;
+      let v = m[1].trim();
+      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+        v = v.slice(1, -1);
+      }
+      if (v) return v;
+    }
+  }
+  return undefined;
+}
+
+function getSecret(key: string): string | undefined {
+  return readServerEnv(key) ?? readEnvFileValue(key);
+}
+
+/**
  * Telnyx API key is configured only via server environment — never stored in the DB or exposed to the client.
  *
  * Set in **`.env.local`** or **`.env`** at the project root (same folder as `package.json`):
@@ -23,7 +59,7 @@ function readServerEnv(name: string): string | undefined {
  * Restart `npm run dev` after changing. On Netlify/Railway/etc., add the variable in the host's Environment / Secrets UI.
  */
 export function getTelnyxApiKey(): string | undefined {
-  return readServerEnv("TELNYX_API_KEY");
+  return getSecret("TELNYX_API_KEY");
 }
 
 /**
@@ -34,7 +70,7 @@ export function getTelnyxApiKey(): string | undefined {
  * @see https://developers.telnyx.com/docs/messaging/messages/messaging-profiles-overview
  */
 export function getTelnyxMessagingProfileId(): string | undefined {
-  return readServerEnv("TELNYX_MESSAGING_PROFILE_ID");
+  return getSecret("TELNYX_MESSAGING_PROFILE_ID");
 }
 
 /** Shared payload for `telnyx.messages.send` */
