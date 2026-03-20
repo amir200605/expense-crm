@@ -72,6 +72,7 @@ export function Navbar({ user }: { user: SessionUser }) {
     .join("")
     .toUpperCase()
     .slice(0, 2) ?? "?";
+  const insuranceId = user?.id ? user.id.slice(0, 8).toUpperCase() : "N/A";
 
   return (
     <header className="navbar-dark sticky top-0 z-40 flex h-14 shrink-0 items-center gap-6 px-4 lg:px-6">
@@ -104,6 +105,9 @@ export function Navbar({ user }: { user: SessionUser }) {
 
       {/* Actions */}
       <div className="flex items-center gap-1">
+        <div className="hidden md:flex items-center rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/90">
+          Insurance ID: {insuranceId}
+        </div>
         <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
           <DropdownMenuTrigger asChild>
             <Button

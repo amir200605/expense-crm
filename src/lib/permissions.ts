@@ -3,6 +3,7 @@ import type { Role, Lead, Client, User } from "@prisma/client";
 
 export type SessionUser = Session["user"] & {
   id?: string;
+  username?: string | null;
   role?: Role;
   agencyId?: string | null;
 };

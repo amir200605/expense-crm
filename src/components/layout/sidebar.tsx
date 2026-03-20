@@ -113,6 +113,7 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
       return next;
     });
   };
+  const sidebarUsername = user?.username?.trim() || user?.email?.split("@")[0] || "user";
 
   return (
     <aside className="sidebar-dark flex h-full w-56 flex-col">
@@ -210,6 +211,10 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
           );
         })}
       </nav>
+      <div className="border-t border-white/10 p-3">
+        <p className="text-[11px] uppercase tracking-wider text-sidebar-muted">Username</p>
+        <p className="mt-1 truncate text-sm font-medium text-sidebar-foreground">@{sidebarUsername}</p>
+      </div>
     </aside>
   );
 }

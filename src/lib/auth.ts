@@ -44,6 +44,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name ?? user.username ?? user.email,
           image: user.avatarUrl,
+          username: user.username,
           role: user.role,
           agencyId: user.agencyId,
         };
@@ -54,6 +55,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.username = (user as { username?: string }).username;
         token.role = (user as { role?: string }).role;
         token.agencyId = (user as { agencyId?: string }).agencyId;
       }
@@ -62,6 +64,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         (session.user as { id?: string }).id = token.id as string;
+        (session.user as { username?: string }).username = token.username as string | undefined;
         (session.user as { role?: string }).role = token.role as string;
         (session.user as { agencyId?: string }).agencyId = token.agencyId as string;
       }
