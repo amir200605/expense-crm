@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -51,6 +52,8 @@ export function InviteMemberSheet({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("AGENT");
+  const [phone, setPhone] = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
   const [success, setSuccess] = useState(false);
 
   const mutation = useMutation({
@@ -62,10 +65,8 @@ export function InviteMemberSheet({
       setUsername("");
       setPassword("");
       setRole("AGENT");
-      setTimeout(() => {
-        setSuccess(false);
-        onOpenChange(false);
-      }, 1500);
+      setPhone("");
+      setLicenseNumber("");
     },
   });
 
@@ -133,13 +134,65 @@ export function InviteMemberSheet({
             </Select>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="invite-phone">Phone (for card preview)</Label>
+            <Input
+              id="invite-phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(877) 864-9126"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="invite-license">License / NPN (for card preview)</Label>
+            <Input
+              id="invite-license"
+              value={licenseNumber}
+              onChange={(e) => setLicenseNumber(e.target.value)}
+              placeholder="20062397"
+            />
+          </div>
+
+          <Card className="overflow-hidden border-border/80">
+            <div className="bg-primary px-4 py-3 text-primary-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em]">
+                Prime Insurance Agency
+              </p>
+            </div>
+            <div className="bg-card p-4">
+              <div className="flex items-start gap-4">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-primary/30 bg-muted text-xl font-semibold text-primary">
+                  {(name.trim().charAt(0) || username.trim().charAt(0) || "A").toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="truncate text-base font-bold uppercase tracking-wide text-primary">
+                    {name.trim() || "NEW TEAM MEMBER"}
+                  </p>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {role.replace(/_/g, " ")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Username: {username.trim() || "pending"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    NPN: {licenseNumber.trim() || "pending"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Phone: {phone.trim() || "pending"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
           {mutation.isError && (
             <p className="text-sm text-destructive">{mutation.error.message}</p>
           )}
 
           {success && (
             <p className="text-sm font-medium text-green-600">
-              Member invited successfully!
+              Member invited successfully! Preview card generated.
             </p>
           )}
 
