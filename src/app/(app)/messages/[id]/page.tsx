@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatDateTime } from "@/lib/utils";
 import { ArrowLeft, Send } from "lucide-react";
 
 type Chat = {
@@ -103,7 +104,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
                   {m.sender.name ?? m.sender.email}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {new Date(m.createdAt).toLocaleString()}
+                  {formatDateTime(m.createdAt)}
                 </p>
               </div>
               <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">{m.body}</p>

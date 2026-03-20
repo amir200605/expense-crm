@@ -25,7 +25,7 @@ import {
   UserCheck, Pause, ChevronDown, ChevronUp, Play,
 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────
 interface ActionNode {
@@ -653,7 +653,7 @@ export function WorkflowBuilder({ automationId }: { automationId?: string }) {
                   <Badge variant={run.status === "completed" ? "default" : run.status === "running" ? "secondary" : "destructive"} className="text-[10px]">
                     {run.status}
                   </Badge>
-                  <span className="text-muted-foreground">{new Date(run.startedAt).toLocaleString()}</span>
+                  <span className="text-muted-foreground">{formatDateTime(run.startedAt)}</span>
                 </div>
               ))}
             </div>

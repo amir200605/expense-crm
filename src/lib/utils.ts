@@ -10,9 +10,19 @@ export function formatCurrency(value: number | string): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 }
 
+/**
+ * Explicit IANA timezone so server and browser render the same string (avoids hydration mismatch).
+ * Override with `NEXT_PUBLIC_APP_TIMEZONE` (e.g. `America/Los_Angeles`).
+ */
+export function getAppDisplayTimeZone(): string {
+  const z = process.env.NEXT_PUBLIC_APP_TIMEZONE?.trim();
+  return z || "America/New_York";
+}
+
 export function formatDate(date: Date | string): string {
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
+    timeZone: getAppDisplayTimeZone(),
   }).format(new Date(date));
 }
 
@@ -20,6 +30,7 @@ export function formatDateTime(date: Date | string): string {
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "short",
     timeStyle: "short",
+    timeZone: getAppDisplayTimeZone(),
   }).format(new Date(date));
 }
 

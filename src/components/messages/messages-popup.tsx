@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { ArrowLeft, MessageSquarePlus, Send, MessagesSquare, X } from "lucide-react";
 
 type Member = { id: string; name: string | null; email: string; role: string; username: string | null };
@@ -323,7 +323,7 @@ export function MessagesPopup({
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-medium">{m.sender.name ?? m.sender.email}</p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(m.createdAt).toLocaleString()}
+                          {formatDateTime(m.createdAt)}
                         </p>
                       </div>
                       <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">{m.body}</p>

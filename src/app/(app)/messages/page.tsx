@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatDateTime } from "@/lib/utils";
 import { MessageSquarePlus } from "lucide-react";
 
 type Member = { id: string; name: string | null; email: string; role: string; username: string | null };
@@ -125,7 +126,7 @@ export default function MessagesPage() {
                     </p>
                   </div>
                   <div className="text-xs text-muted-foreground whitespace-nowrap">
-                    {new Date(c.updatedAt).toLocaleString()}
+                    {formatDateTime(c.updatedAt)}
                   </div>
                 </div>
               </Card>
