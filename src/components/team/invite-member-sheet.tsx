@@ -35,8 +35,13 @@ async function inviteMember(data: {
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? "Failed to invite member");
+    const err = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      hint?: string;
+      code?: string;
+    };
+    const msg = [err.error, err.hint].filter(Boolean).join(" ");
+    throw new Error(msg || "Failed to invite member");
   }
   return res.json();
 }

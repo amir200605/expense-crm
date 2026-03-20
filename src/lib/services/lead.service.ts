@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { optionalStringId, parseOptionalDateString } from "@/lib/parse-optional-date";
 import type { CreateLeadInput, UpdateLeadInput, ListLeadsQuery } from "@/lib/validations/lead";
 import type { LeadDisposition, PipelineStage, Prisma } from "@prisma/client";
 
@@ -18,12 +19,13 @@ export async function findDuplicateLeads(agencyId: string, data: { phone: string
   if (data.email) {
     conditions.push({ agencyId, email: data.email });
   }
-  if (data.firstName && data.lastName && data.dateOfBirth) {
+  const dob = parseOptionalDateString(data.dateOfBirth);
+  if (data.firstName && data.lastName && dob) {
     conditions.push({
       agencyId,
       firstName: { equals: data.firstName },
       lastName: { equals: data.lastName },
-      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+      dateOfBirth: dob,
     });
   }
   if (conditions.length === 0) return [];
@@ -50,6 +52,7 @@ export async function createLead(agencyId: string, input: CreateLeadInput, rawPa
     });
   }
   const fullName = [input.firstName, input.lastName].filter(Boolean).join(" ");
+  const dateOfBirth = parseOptionalDateString(input.dateOfBirth);
   const lead = await prisma.lead.create({
     data: {
       agencyId,
@@ -62,7 +65,7 @@ export async function createLead(agencyId: string, input: CreateLeadInput, rawPa
       vendor: input.vendor ?? null,
       campaign: input.campaign ?? null,
       subId: input.subId ?? null,
-      dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : null,
+      dateOfBirth,
       gender: input.gender ?? null,
       address1: input.address1 ?? null,
       address2: input.address2 ?? null,
@@ -79,8 +82,8 @@ export async function createLead(agencyId: string, input: CreateLeadInput, rawPa
       leadScore: input.leadScore ?? null,
       consentStatus: input.consentStatus ?? null,
       doNotCall: input.doNotCall ?? false,
-      assignedAgentId: input.assignedAgentId?.trim() || null,
-      assignedManagerId: input.assignedManagerId?.trim() || null,
+      assignedAgentId: optionalStringId(input.assignedAgentId),
+      assignedManagerId: optionalStringId(input.assignedManagerId),
       disposition: (input.disposition as LeadDisposition) ?? "NEW",
       pipelineStage: (input.pipelineStage as PipelineStage) ?? "NEW_LEAD",
       notes: input.notes ?? null,
