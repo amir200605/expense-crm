@@ -42,7 +42,8 @@ export default function TeamPage() {
   const [editMember, setEditMember] = useState<Member | null>(null);
   const [editName, setEditName] = useState("");
   const [editUsername, setEditUsername] = useState("");
-  const [editRole, setEditRole] = useState("");
+  /** Must match a SelectItem value — never "" or Radix warns (uncontrolled/controlled). */
+  const [editRole, setEditRole] = useState<"AGENT" | "MANAGER" | "AGENCY_OWNER">("AGENT");
   const [saveMsg, setSaveMsg] = useState("");
 
   const { data, isLoading, isError, error } = useQuery({
@@ -90,7 +91,10 @@ export default function TeamPage() {
     setEditMember(m);
     setEditName(m.name ?? "");
     setEditUsername(m.username ?? "");
-    setEditRole(m.role);
+    const r = m.role;
+    setEditRole(
+      r === "AGENT" || r === "MANAGER" || r === "AGENCY_OWNER" ? r : "AGENT"
+    );
     setSaveMsg("");
     setEditOpen(true);
   }
@@ -190,7 +194,12 @@ export default function TeamPage() {
             </div>
             <div className="space-y-2">
               <Label>Role</Label>
-              <Select value={editRole} onValueChange={setEditRole}>
+              <Select
+                value={editRole}
+                onValueChange={(v) =>
+                  setEditRole(v as "AGENT" | "MANAGER" | "AGENCY_OWNER")
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>

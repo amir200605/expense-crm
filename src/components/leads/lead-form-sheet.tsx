@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -64,6 +65,32 @@ async function fetchTeam(): Promise<{ members: TeamMember[] }> {
   return res.json();
 }
 
+/** All fields used in the form must have defined defaults so inputs stay controlled. */
+function getEmptyLeadValues(): CreateLeadInput {
+  return {
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    doNotCall: false,
+    source: "",
+    state: "",
+    notes: "",
+    assignedAgentId: "",
+  };
+}
+
+function toCreateLeadPayload(values: CreateLeadInput): CreateLeadInput {
+  return {
+    ...values,
+    email: values.email === "" ? undefined : values.email,
+    source: values.source || undefined,
+    state: values.state || undefined,
+    notes: values.notes || undefined,
+    assignedAgentId: values.assignedAgentId || undefined,
+  };
+}
+
 export function LeadFormSheet({
   open,
   onOpenChange,
@@ -72,16 +99,17 @@ export function LeadFormSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  const defaultLeadValues = useMemo(() => getEmptyLeadValues(), []);
   const form = useForm<CreateLeadInput>({
     resolver: zodResolver(createLeadSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      phone: "",
-      email: "",
-      doNotCall: false,
-    },
+    defaultValues: defaultLeadValues,
   });
+
+  useEffect(() => {
+    if (open) {
+      form.reset(defaultLeadValues);
+    }
+  }, [open, form, defaultLeadValues]);
 
   const { data: teamData } = useQuery({
     queryKey: ["team"],
@@ -98,7 +126,7 @@ export function LeadFormSheet({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-      form.reset();
+      form.reset(defaultLeadValues);
       onOpenChange(false);
       if (data.lead?.id) {
         window.location.href = `/leads/${data.lead.id}`;
@@ -107,7 +135,7 @@ export function LeadFormSheet({
   });
 
   function onSubmit(values: CreateLeadInput) {
-    mutation.mutate(values);
+    mutation.mutate(toCreateLeadPayload(values));
   }
 
   return (
@@ -126,7 +154,7 @@ export function LeadFormSheet({
                   <FormItem>
                     <FormLabel>First name</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -139,7 +167,7 @@ export function LeadFormSheet({
                   <FormItem>
                     <FormLabel>Last name</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -153,7 +181,7 @@ export function LeadFormSheet({
                 <FormItem>
                   <FormLabel>Phone</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -166,7 +194,7 @@ export function LeadFormSheet({
                 <FormItem>
                   <FormLabel>Email (optional)</FormLabel>
                   <FormControl>
-                    <Input type="email" {...field} />
+                    <Input type="email" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -193,7 +221,7 @@ export function LeadFormSheet({
                   <FormItem>
                     <FormLabel>State</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g. TX" />
+                      <Input {...field} value={field.value ?? ""} placeholder="e.g. TX" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -237,7 +265,7 @@ export function LeadFormSheet({
                 <FormItem>
                   <FormLabel>Notes</FormLabel>
                   <FormControl>
-                    <Textarea {...field} rows={3} />
+                    <Textarea {...field} value={field.value ?? ""} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
