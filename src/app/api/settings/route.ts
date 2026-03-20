@@ -5,7 +5,17 @@ import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/permissions";
 import { getTelnyxApiKey } from "@/lib/telnyx-env";
 
+/** Replit injects secrets at runtime; avoid static `process.env.REPL_ID` inlining at build. */
+function isReplitRuntime(): boolean {
+  const rid = "REPL" + "_ID";
+  const rslug = "REPL" + "_SLUG";
+  return Boolean(process.env[rid] ?? process.env[rslug]);
+}
+
 const MASK = "••••••••";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function maskIntegrations(raw: Record<string, Record<string, string>> | undefined) {
   if (!raw) return {};
@@ -61,7 +71,7 @@ export async function GET() {
     integrationsMeta: {
       telnyxApiKeyConfigured: Boolean(getTelnyxApiKey()),
       telnyxFromNumberSaved: fromSaved,
-      replit: Boolean(process.env.REPL_ID ?? process.env.REPL_SLUG),
+      replit: isReplitRuntime(),
     },
   });
 }
@@ -139,7 +149,7 @@ export async function PATCH(req: Request) {
     integrationsMeta: {
       telnyxApiKeyConfigured: Boolean(getTelnyxApiKey()),
       telnyxFromNumberSaved: fromSavedPatch,
-      replit: Boolean(process.env.REPL_ID ?? process.env.REPL_SLUG),
+      replit: isReplitRuntime(),
     },
   });
 }

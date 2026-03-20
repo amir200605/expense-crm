@@ -6,6 +6,9 @@ import type { SessionUser } from "@/lib/permissions";
 import Telnyx from "telnyx";
 import { buildTelnyxSendParams, getTelnyxApiKey } from "@/lib/telnyx-env";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 /** Accept +15551234567, 5551234567, (555) 123-4567, etc. */
 function normalizeToE164(input: string): string | null {
   const t = input.trim();

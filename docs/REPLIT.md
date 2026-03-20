@@ -3,10 +3,12 @@
 ## Telnyx SMS (`TELNYX_API_KEY`)
 
 1. In Replit, open **Tools → Secrets** (lock icon).
-2. Add a secret with the name **`TELNYX_API_KEY`** exactly (case-sensitive).
-3. Paste your Telnyx API key as the value.
-4. **Stop** the Repl, then **Run** again so the process picks up secrets.
+2. Add a secret with the name **`TELNYX_API_KEY`** exactly (all caps, underscores — **not** `telnyx_api_key` or `Telnyx-Key`).
+3. Paste your Telnyx API key as the value (no extra spaces).
+4. **Stop** the Repl, then **Run** again so the process picks up secrets. (Secrets are injected when the Node process starts.)
 5. In the app **Settings → Integrations**, set **From number** and click **Save integrations**.
+
+If Settings still shows **TELNYX_API_KEY: missing** after that, pull the latest app code: we read the key in a way that works when the key exists only at **runtime** (Replit), not only at **build** time.
 
 ### Published deployments
 

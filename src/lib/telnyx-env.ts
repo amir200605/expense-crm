@@ -11,8 +11,15 @@ if (typeof process !== "undefined") {
   }
 }
 
+/**
+ * Build env var names at runtime so Next.js webpack does not replace `process.env.TELNYX_API_KEY`
+ * with `undefined` when the key was missing at **build** time (common on Replit / CI where secrets
+ * exist only at **runtime**).
+ */
+const ENV_TELNYX_API_KEY = "TELNYX" + "_" + "API_KEY";
+const ENV_TELNYX_MESSAGING_PROFILE_ID = "TELNYX" + "_" + "MESSAGING" + "_" + "PROFILE" + "_" + "ID";
+
 function readServerEnv(name: string): string | undefined {
-  // Bracket access avoids some bundlers inlining missing build-time env as undefined in production
   const v = process.env[name];
   return typeof v === "string" && v.trim() ? v.trim() : undefined;
 }
@@ -35,7 +42,8 @@ function readEnvFileValue(key: string): string | undefined {
     for (const line of text.split(/\r?\n/)) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) continue;
-      const m = trimmed.match(new RegExp(`^${key}\\s*=\\s*(.*)$`));
+      const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const m = trimmed.match(new RegExp(`^${escaped}\\s*=\\s*(.*)$`));
       if (!m) continue;
       let v = m[1].trim();
       if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
@@ -47,30 +55,28 @@ function readEnvFileValue(key: string): string | undefined {
   return undefined;
 }
 
-function getSecret(key: string): string | undefined {
-  return readServerEnv(key) ?? readEnvFileValue(key);
+function getSecret(name: string): string | undefined {
+  return readServerEnv(name) ?? readEnvFileValue(name);
 }
 
 /**
- * Telnyx API key is configured only via server environment — never stored in the DB or exposed to the client.
+ * Telnyx API key — server env / Replit Secrets only (never in DB or client).
  *
- * Set in **`.env.local`** or **`.env`** at the project root (same folder as `package.json`):
- * `TELNYX_API_KEY=key_xxxxxxxx`
- * Restart `npm run dev` after changing. On Netlify/Railway/etc., add the variable in the host's Environment / Secrets UI.
+ * Replit: Tools → Secrets → name must be exactly `TELNYX_API_KEY`, then Stop + Run the Repl.
+ * Deployments: add the same secret under deployment secrets and redeploy.
  */
 export function getTelnyxApiKey(): string | undefined {
-  return getSecret("TELNYX_API_KEY");
+  const primary = getSecret(ENV_TELNYX_API_KEY);
+  if (primary) return primary;
+  // Optional alternate name if someone misnamed the secret
+  return getSecret("TELNYX" + "_" + "KEY");
 }
 
 /**
- * Optional. Telnyx usually resolves the messaging profile from your `from` number if that number is
- * assigned to a profile in the Mission Control portal. Set this when the API requires an explicit
- * profile UUID (e.g. some alphanumeric-sender or multi-profile setups).
- *
- * @see https://developers.telnyx.com/docs/messaging/messages/messaging-profiles-overview
+ * Optional messaging profile UUID (Telnyx Mission Control).
  */
 export function getTelnyxMessagingProfileId(): string | undefined {
-  return getSecret("TELNYX_MESSAGING_PROFILE_ID");
+  return getSecret(ENV_TELNYX_MESSAGING_PROFILE_ID);
 }
 
 /** Shared payload for `telnyx.messages.send` */
