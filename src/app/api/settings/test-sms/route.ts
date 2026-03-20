@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/permissions";
 import Telnyx from "telnyx";
+import { resolveTelnyxFromNumber } from "@/lib/integration-env";
 import { buildTelnyxSendParams, getTelnyxApiKey } from "@/lib/telnyx-env";
 
 export const dynamic = "force-dynamic";
@@ -66,12 +67,12 @@ export async function POST(req: Request) {
   const integrations = (agency?.settings as Record<string, unknown>)?.integrations as
     | Record<string, Record<string, string>>
     | undefined;
-  const fromNumber = integrations?.telnyx?.fromNumber?.trim();
+  const fromNumber = resolveTelnyxFromNumber(integrations?.telnyx?.fromNumber);
   if (!fromNumber) {
     return NextResponse.json(
       {
         error:
-          "From number is not set. Enter your Telnyx sending number below and click Save integrations first.",
+          "From number is not set. Add TELNYX_FROM_NUMBER to server secrets, or enter it in Settings → Integrations and click Save integrations.",
       },
       { status: 400 }
     );

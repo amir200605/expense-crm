@@ -28,6 +28,12 @@ interface IntegrationsMeta {
   telnyxApiKeyConfigured: boolean;
   telnyxFromNumberSaved: boolean;
   replit: boolean;
+  envPresence?: {
+    outlookFromEmail: boolean;
+    outlookSmtpUser: boolean;
+    outlookSmtpPass: boolean;
+    telnyxFromNumber: boolean;
+  };
 }
 
 interface MeUser {
@@ -475,14 +481,30 @@ export default function SettingsPage() {
                     )}
                   </li>
                   <li>
-                    <span className="text-foreground">From number (saved in app):</span>{" "}
+                    <span className="text-foreground">From number (app or secret):</span>{" "}
                     {data.integrationsMeta.telnyxFromNumberSaved ? (
-                      <span className="font-medium text-green-600">saved — use Save integrations if you just changed it</span>
+                      <span className="font-medium text-green-600">configured</span>
                     ) : (
-                      <span className="font-medium text-amber-600">not saved yet</span>
+                      <span className="font-medium text-amber-600">missing — set below or add <code className="text-xs">TELNYX_FROM_NUMBER</code> to secrets</span>
                     )}
                   </li>
                 </ul>
+                {data.integrationsMeta.envPresence && (
+                  <div className="mt-3 border-t border-border/60 pt-3">
+                    <p className="mb-1 font-medium text-foreground">Outlook (optional env overrides)</p>
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      Replit Secrets: <code className="rounded bg-muted px-1">OUTLOOK_FROM_EMAIL</code>,{" "}
+                      <code className="rounded bg-muted px-1">OUTLOOK_SMTP_USER</code>,{" "}
+                      <code className="rounded bg-muted px-1">OUTLOOK_SMTP_PASSWORD</code>. Env overrides the fields below.
+                    </p>
+                    <ul className="list-inside list-disc space-y-0.5 text-xs text-muted-foreground">
+                      <li>OUTLOOK_FROM_EMAIL: {data.integrationsMeta.envPresence.outlookFromEmail ? <span className="text-green-600">set</span> : "—"}</li>
+                      <li>OUTLOOK_SMTP_USER: {data.integrationsMeta.envPresence.outlookSmtpUser ? <span className="text-green-600">set</span> : "—"}</li>
+                      <li>OUTLOOK_SMTP_PASSWORD: {data.integrationsMeta.envPresence.outlookSmtpPass ? <span className="text-green-600">set</span> : "—"}</li>
+                      <li>TELNYX_FROM_NUMBER: {data.integrationsMeta.envPresence.telnyxFromNumber ? <span className="text-green-600">set</span> : "—"}</li>
+                    </ul>
+                  </div>
+                )}
                 {data.integrationsMeta.replit && (
                   <p className="mt-2 text-xs text-foreground">
                     <strong>Replit:</strong> add a Secret named exactly <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> (Tools → Secrets / lock icon). For{" "}
@@ -495,12 +517,11 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <h4 className="text-sm font-medium">SMS (Telnyx)</h4>
                 <p className="text-xs text-muted-foreground">
-                  Set the API key via <code className="rounded bg-muted px-1">TELNYX_API_KEY</code> in your host env or Replit Secrets, then redeploy or restart. Only the sending number is saved here. In Telnyx, that number must be assigned to a{" "}
-                  <strong>messaging profile</strong> (Mission Control → Numbers). If Telnyx still asks for a profile in the API, add{" "}
-                  <code className="rounded bg-muted px-1">TELNYX_MESSAGING_PROFILE_ID</code> to your server env.
+                  API key: <code className="rounded bg-muted px-1">TELNYX_API_KEY</code>. From number: save here, or set secret <code className="rounded bg-muted px-1">TELNYX_FROM_NUMBER</code> (E.164). In Telnyx, the number must be on a <strong>messaging profile</strong>. Optional:{" "}
+                  <code className="rounded bg-muted px-1">TELNYX_MESSAGING_PROFILE_ID</code>.
                 </p>
                 <div className="max-w-md space-y-1.5">
-                  <Label htmlFor="telnyx-from">From number</Label>
+                  <Label htmlFor="telnyx-from">From number (or use TELNYX_FROM_NUMBER secret)</Label>
                   <Input
                     id="telnyx-from"
                     value={telnyxFromNumber}
@@ -551,7 +572,9 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <h4 className="text-sm font-medium">Email (Outlook / Office 365)</h4>
                 <p className="text-xs text-muted-foreground">
-                  Use your Outlook or Microsoft 365 account. For 2FA accounts, use an app password from account.microsoft.com/security.
+                  Use your Outlook or Microsoft 365 account. For 2FA, use an app password from account.microsoft.com/security. You can store credentials in Replit Secrets as{" "}
+                  <code className="rounded bg-muted px-1">OUTLOOK_FROM_EMAIL</code>, <code className="rounded bg-muted px-1">OUTLOOK_SMTP_USER</code>,{" "}
+                  <code className="rounded bg-muted px-1">OUTLOOK_SMTP_PASSWORD</code> — they override these fields when set.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">

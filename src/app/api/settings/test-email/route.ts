@@ -3,7 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/permissions";
+import { resolveOutlookIntegration } from "@/lib/integration-env";
 import nodemailer from "nodemailer";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -26,9 +30,12 @@ export async function POST(req: Request) {
     select: { settings: true },
   });
   const integrations = (agency?.settings as Record<string, unknown>)?.integrations as Record<string, Record<string, string>> | undefined;
-  const outlook = integrations?.outlook;
-  if (!outlook?.smtpUser || !outlook?.smtpPass || !outlook?.fromEmail) {
-    return NextResponse.json({ error: "Outlook integration not configured. Set From email, SMTP user, and SMTP password in Settings → Integrations." }, { status: 400 });
+  const outlook = resolveOutlookIntegration(integrations?.outlook);
+  if (!outlook.smtpUser || !outlook.smtpPass || !outlook.fromEmail) {
+    return NextResponse.json({
+      error:
+        "Outlook integration not configured. Set From email, SMTP user, and SMTP password in Settings → Integrations, or set server secrets OUTLOOK_FROM_EMAIL, OUTLOOK_SMTP_USER, OUTLOOK_SMTP_PASSWORD (e.g. Replit Secrets).",
+    }, { status: 400 });
   }
 
   try {

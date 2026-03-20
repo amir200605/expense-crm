@@ -4,6 +4,12 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/permissions";
 import { getTelnyxApiKey } from "@/lib/telnyx-env";
+import {
+  getIntegrationEnvPresence,
+  mergeIntegrationsWithEnv,
+  resolveTelnyxFromNumber,
+  type IntegrationsLike,
+} from "@/lib/integration-env";
 
 /** Replit injects secrets at runtime; avoid static `process.env.REPL_ID` inlining at build. */
 function isReplitRuntime(): boolean {
@@ -18,21 +24,14 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function maskIntegrations(raw: Record<string, Record<string, string>> | undefined) {
-  if (!raw) return {};
+  const merged = mergeIntegrationsWithEnv(raw as IntegrationsLike);
   return {
-    /** SMS API key lives in TELNYX_API_KEY env only — not stored in DB */
-    telnyx: raw.telnyx
-      ? {
-          fromNumber: raw.telnyx.fromNumber ?? "",
-        }
-      : {},
-    outlook: raw.outlook
-      ? {
-          fromEmail: raw.outlook.fromEmail ?? "",
-          smtpUser: raw.outlook.smtpUser ?? "",
-          smtpPass: raw.outlook.smtpPass ? MASK : "",
-        }
-      : {},
+    telnyx: { fromNumber: merged.telnyx?.fromNumber ?? "" },
+    outlook: {
+      fromEmail: merged.outlook?.fromEmail ?? "",
+      smtpUser: merged.outlook?.smtpUser ?? "",
+      smtpPass: merged.outlook?.smtpPass ? MASK : "",
+    },
   };
 }
 
@@ -58,7 +57,7 @@ export async function GET() {
   const settings = (agency.settings as Record<string, unknown>) ?? {};
   const integrations = maskIntegrations(settings.integrations as Record<string, Record<string, string>>);
   const rawTelnyx = (settings.integrations as Record<string, Record<string, string>> | undefined)?.telnyx;
-  const fromSaved = Boolean(rawTelnyx?.fromNumber?.trim());
+  const fromSaved = Boolean(resolveTelnyxFromNumber(rawTelnyx?.fromNumber));
 
   return NextResponse.json({
     agency: {
@@ -72,6 +71,7 @@ export async function GET() {
       telnyxApiKeyConfigured: Boolean(getTelnyxApiKey()),
       telnyxFromNumberSaved: fromSaved,
       replit: isReplitRuntime(),
+      envPresence: getIntegrationEnvPresence(),
     },
   });
 }
@@ -136,7 +136,7 @@ export async function PATCH(req: Request) {
   const settings = (agency.settings as Record<string, unknown>) ?? {};
   const integrations = maskIntegrations(settings.integrations as Record<string, Record<string, string>>);
   const rawTelnyxPatch = (settings.integrations as Record<string, Record<string, string>> | undefined)?.telnyx;
-  const fromSavedPatch = Boolean(rawTelnyxPatch?.fromNumber?.trim());
+  const fromSavedPatch = Boolean(resolveTelnyxFromNumber(rawTelnyxPatch?.fromNumber));
 
   return NextResponse.json({
     agency: {
@@ -150,6 +150,7 @@ export async function PATCH(req: Request) {
       telnyxApiKeyConfigured: Boolean(getTelnyxApiKey()),
       telnyxFromNumberSaved: fromSavedPatch,
       replit: isReplitRuntime(),
+      envPresence: getIntegrationEnvPresence(),
     },
   });
 }

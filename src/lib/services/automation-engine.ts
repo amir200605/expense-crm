@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import type { AutomationTrigger, LeadDisposition, PipelineStage } from "@prisma/client";
 import Telnyx from "telnyx";
 import nodemailer from "nodemailer";
+import { mergeIntegrationsWithEnv } from "@/lib/integration-env";
 import { buildTelnyxSendParams, getTelnyxApiKey } from "@/lib/telnyx-env";
 
 interface ActionNode {
@@ -49,7 +50,8 @@ export async function fireAutomationTrigger(
       where: { id: context.agencyId },
       select: { settings: true },
     });
-    const integrations: IntegrationsConfig = ((agency?.settings as Record<string, unknown>)?.integrations as IntegrationsConfig) ?? {};
+    const rawInt = ((agency?.settings as Record<string, unknown>)?.integrations as IntegrationsConfig) ?? {};
+    const integrations: IntegrationsConfig = mergeIntegrationsWithEnv(rawInt) as IntegrationsConfig;
 
     const run = await prisma.automationRun.create({
       data: {
@@ -111,7 +113,8 @@ export async function runAutomationForTest(
     where: { id: context.agencyId },
     select: { settings: true },
   });
-  const integrations: IntegrationsConfig = ((agency?.settings as Record<string, unknown>)?.integrations as IntegrationsConfig) ?? {};
+  const rawIntTest = ((agency?.settings as Record<string, unknown>)?.integrations as IntegrationsConfig) ?? {};
+  const integrations: IntegrationsConfig = mergeIntegrationsWithEnv(rawIntTest) as IntegrationsConfig;
 
   const run = await prisma.automationRun.create({
     data: {

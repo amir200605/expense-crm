@@ -1,5 +1,6 @@
 import Telnyx from "telnyx";
 import { prisma } from "@/lib/db";
+import { resolveTelnyxFromNumber } from "@/lib/integration-env";
 import { buildTelnyxSendParams, getTelnyxApiKey } from "@/lib/telnyx-env";
 
 type PolicyLike = {
@@ -66,9 +67,10 @@ export async function sendClientWelcomeSms(params: {
   const settings = (agency?.settings as Record<string, unknown>) ?? {};
   const integrations = (settings.integrations as Record<string, Record<string, string>>) ?? {};
   const telnyxConfig = integrations.telnyx ?? {};
+  const fromNumber = resolveTelnyxFromNumber(telnyxConfig.fromNumber);
   const apiKey = getTelnyxApiKey();
 
-  if (!apiKey || !telnyxConfig.fromNumber || !params.client.phone?.trim()) {
+  if (!apiKey || !fromNumber || !params.client.phone?.trim()) {
     return { sent: false, reason: "missing_telnyx_or_phone" as const };
   }
 
@@ -114,7 +116,7 @@ TransAmerica 877-234-4848`;
   const telnyx = new Telnyx({ apiKey });
   await telnyx.messages.send(
     buildTelnyxSendParams({
-      from: telnyxConfig.fromNumber,
+      from: fromNumber,
       to: params.client.phone,
       text: message,
     }) as Parameters<typeof telnyx.messages.send>[0],
