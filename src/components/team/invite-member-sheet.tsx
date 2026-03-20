@@ -28,9 +28,10 @@ async function inviteMember(data: {
   password: string;
   role: string;
 }) {
-  const res = await fetch("/api/auth/signup", {
+  const res = await fetch("/api/team/invite", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify(data),
   });
   if (!res.ok) {

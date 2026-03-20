@@ -5,6 +5,7 @@ import { canViewLead } from "@/lib/permissions";
 import { listLeads } from "@/lib/services/lead.service";
 import { listLeadsQuerySchema } from "@/lib/validations/lead";
 import type { SessionUser } from "@/lib/permissions";
+import { resolveAgencyIdForSession } from "@/lib/session-agency";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const user = session.user as SessionUser;
-  const agencyId = user.agencyId;
+  const agencyId = await resolveAgencyIdForSession(user);
   if (!agencyId) {
     return NextResponse.json({ error: "No agency" }, { status: 403 });
   }

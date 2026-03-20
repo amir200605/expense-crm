@@ -41,11 +41,19 @@ async function createLeadApi(data: CreateLeadInput) {
   const res = await fetch("/api/leads", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? "Failed to create lead");
+    const err = await res.json().catch(() => ({})) as {
+      error?: string;
+      details?: unknown;
+    };
+    const detail =
+      err.details != null
+        ? ` ${typeof err.details === "string" ? err.details : JSON.stringify(err.details)}`
+        : "";
+    throw new Error((err.error ?? "Failed to create lead") + detail);
   }
   return res.json();
 }

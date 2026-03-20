@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canAccessTeam } from "@/lib/permissions";
 import type { SessionUser } from "@/lib/permissions";
+import { resolveAgencyIdForSession } from "@/lib/session-agency";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -16,7 +17,7 @@ export async function GET() {
   }
 
   const user = session.user as SessionUser;
-  const agencyId = user.agencyId;
+  const agencyId = await resolveAgencyIdForSession(user);
   if (!agencyId) {
     return NextResponse.json({ error: "No agency" }, { status: 403 });
   }
