@@ -23,10 +23,50 @@ interface AgencySettings {
   integrations?: IntegrationsConfig;
 }
 
+interface MeUser {
+  id: string;
+  name: string;
+  email: string;
+  username: string | null;
+  role: string;
+}
+
 async function fetchSettings(): Promise<{ agency: AgencySettings }> {
   const res = await fetch("/api/settings");
   if (!res.ok) throw new Error("Failed to load settings");
   return res.json();
+}
+
+async function fetchMe(): Promise<{ user: MeUser }> {
+  const res = await fetch("/api/me");
+  if (!res.ok) throw new Error("Failed to load profile");
+  return res.json();
+}
+
+async function patchMe(data: { name?: string }) {
+  const res = await fetch("/api/me", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? "Failed to save profile");
+  }
+  return res.json();
+}
+
+async function changePassword(data: { currentPassword: string; newPassword: string }) {
+  const res = await fetch("/api/auth/change-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(body.error ?? "Failed to change password");
+  }
+  return body;
 }
 
 async function patchSettings(data: { name?: string; billingEmail?: string; integrations?: IntegrationsConfig }) {
@@ -42,9 +82,175 @@ async function patchSettings(data: { name?: string; billingEmail?: string; integ
   return res.json();
 }
 
+function AgentSettingsPanel() {
+  const queryClient = useQueryClient();
+  const { update: updateSession } = useSession();
+
+  const [displayName, setDisplayName] = useState("");
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["me"],
+    queryFn: fetchMe,
+  });
+
+  useEffect(() => {
+    if (data?.user?.name) setDisplayName(data.user.name);
+  }, [data]);
+
+  const profileMutation = useMutation({
+    mutationFn: patchMe,
+    onSuccess: async () => {
+      queryClient.invalidateQueries({ queryKey: ["me"] });
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 3000);
+      await updateSession?.();
+    },
+  });
+
+  const passwordMutation = useMutation({
+    mutationFn: changePassword,
+    onSuccess: () => {
+      setPasswordMessage({ ok: true, text: "Password updated successfully." });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setPasswordMessage(null), 5000);
+    },
+    onError: (err: Error) => {
+      setPasswordMessage({ ok: false, text: err.message });
+    },
+  });
+
+  function handleProfileSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    profileMutation.mutate({ name: displayName.trim() });
+  }
+
+  function handlePasswordSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordMessage(null);
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ ok: false, text: "New passwords do not match." });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordMessage({ ok: false, text: "New password must be at least 8 characters." });
+      return;
+    }
+    passwordMutation.mutate({ currentPassword, newPassword });
+  }
+
+  if (isLoading) {
+    return <Skeleton className="h-64 w-full max-w-2xl rounded-lg" />;
+  }
+
+  const user = data?.user;
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <Card className="border-border/80 shadow-soft">
+        <CardHeader>
+          <CardTitle>My profile</CardTitle>
+          <CardDescription>Update how your name appears in the app.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleProfileSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="agent-name">Display name</Label>
+              <Input
+                id="agent-name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+                minLength={1}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={user?.email ?? ""} disabled className="bg-muted/50" />
+              <p className="text-xs text-muted-foreground">Contact an agency owner to change your email.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Username</Label>
+              <Input value={user?.username ?? "—"} disabled className="bg-muted/50 font-mono text-sm" />
+            </div>
+            {profileMutation.isError && (
+              <p className="text-sm text-destructive">{(profileMutation.error as Error).message}</p>
+            )}
+            {profileSaved && <p className="text-sm font-medium text-green-600">Profile saved</p>}
+            <Button type="submit" disabled={profileMutation.isPending}>
+              {profileMutation.isPending ? "Saving…" : "Save profile"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/80 shadow-soft">
+        <CardHeader>
+          <CardTitle>Change password</CardTitle>
+          <CardDescription>Use a strong password you don&apos;t use elsewhere.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePasswordSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="current-pw">Current password</Label>
+              <Input
+                id="current-pw"
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-pw">New password</Label>
+              <Input
+                id="new-pw"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-pw">Confirm new password</Label>
+              <Input
+                id="confirm-pw"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+            </div>
+            {passwordMessage && (
+              <p className={passwordMessage.ok ? "text-sm text-green-600" : "text-sm text-destructive"}>
+                {passwordMessage.text}
+              </p>
+            )}
+            <Button type="submit" variant="secondary" disabled={passwordMutation.isPending}>
+              {passwordMutation.isPending ? "Updating…" : "Update password"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { data: sessionData } = useSession();
   const role = (sessionData?.user as { role?: string } | undefined)?.role;
+  const isAgent = role === "AGENT";
   const canEdit = role === "AGENCY_OWNER" || role === "SUPER_ADMIN";
 
   const queryClient = useQueryClient();
@@ -63,6 +269,7 @@ export default function SettingsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["settings"],
     queryFn: fetchSettings,
+    enabled: !isAgent,
   });
 
   useEffect(() => {
@@ -131,6 +338,15 @@ export default function SettingsPage() {
         ? { fromEmail: outlookFromEmail || undefined, smtpUser: outlookSmtpUser || undefined, smtpPass: outlookSmtpPass || undefined }
         : undefined,
     });
+  }
+
+  if (isAgent) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="My settings" description="Your profile and password" />
+        <AgentSettingsPanel />
+      </div>
+    );
   }
 
   return (
