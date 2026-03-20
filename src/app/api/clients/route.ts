@@ -63,6 +63,10 @@ export async function POST(req: Request) {
       },
       policy: latestPolicy,
       agentName: user.name ?? user.email ?? "your life insurance agent",
+      logToLead:
+        parsed.data.linkedLeadId && user.id
+          ? { leadId: parsed.data.linkedLeadId, userId: user.id }
+          : undefined,
     });
   } catch (smsError) {
     console.error("[clients] welcome SMS send failed:", smsError);

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,15 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
-import { Plus, Search, Users, X } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Plus, Search, Trash2, Users, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { getDispositionBadgeVariant, getStageBadgeVariant } from "@/lib/status-pill";
 import { LeadFormSheet } from "@/components/leads/lead-form-sheet";
@@ -74,6 +83,10 @@ const STAGE_OPTIONS = [
 ];
 
 export default function LeadsPage() {
+  const { data: session } = useSession();
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  const showDeleteLead = role && role !== "QA_COMPLIANCE";
+
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -81,6 +94,7 @@ export default function LeadsPage() {
   const [disposition, setDisposition] = useState("");
   const [pipelineStage, setPipelineStage] = useState("");
   const [formOpen, setFormOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["leads", page, searchDebounced, disposition, pipelineStage],
@@ -102,6 +116,20 @@ export default function LeadsPage() {
   const agents = (teamData?.members ?? []).filter(
     (m) => m.role === "AGENT" || m.role === "MANAGER" || m.role === "AGENCY_OWNER"
   );
+
+  const deleteMutation = useMutation({
+    mutationFn: async (leadId: string) => {
+      const res = await fetch(`/api/leads/${leadId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Failed to delete lead");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setDeleteTarget(null);
+    },
+  });
 
   const assignMutation = useMutation({
     mutationFn: async ({ leadId, agentId }: { leadId: string; agentId: string | null }) => {
@@ -142,6 +170,33 @@ export default function LeadsPage() {
         }
       />
       <LeadFormSheet open={formOpen} onOpenChange={setFormOpen} />
+
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete lead?</DialogTitle>
+            <DialogDescription>
+              Permanently remove {deleteTarget?.name ?? "this lead"}? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteMutation.isError && (
+            <p className="text-sm text-destructive">{deleteMutation.error.message}</p>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteMutation.isPending || !deleteTarget}
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card className="border-border/80 shadow-soft">
         <CardContent className="pt-6">
@@ -211,7 +266,7 @@ export default function LeadsPage() {
                       <TableHead>Stage</TableHead>
                       <TableHead>Assigned Agent</TableHead>
                       <TableHead>Last contacted</TableHead>
-                      <TableHead className="w-[80px]"></TableHead>
+                      <TableHead className="w-[120px] text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -248,10 +303,29 @@ export default function LeadsPage() {
                           </Select>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">{lead.lastContactedAt ? formatDate(lead.lastContactedAt) : "—"}</TableCell>
-                        <TableCell>
-                          <Link href={`/leads/${lead.id}`}>
-                            <Button variant="ghost" size="sm">View</Button>
-                          </Link>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Link href={`/leads/${lead.id}`}>
+                              <Button variant="ghost" size="sm">View</Button>
+                            </Link>
+                            {showDeleteLead && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                title="Delete lead"
+                                onClick={() =>
+                                  setDeleteTarget({
+                                    id: lead.id,
+                                    name: lead.fullName || `${lead.firstName} ${lead.lastName}`,
+                                  })
+                                }
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

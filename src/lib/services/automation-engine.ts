@@ -354,7 +354,7 @@ async function executeAction(action: ActionNode, ctx: TriggerContext, integratio
             action: "SMS_SENT",
             entityType: "Lead",
             entityId: ctx.leadId,
-            newValue: { to: smsTo ?? undefined, message, sendTo, sent },
+            newValue: { to: smsTo ?? undefined, message, sendTo, sent, source: "automation" },
           },
         });
       }

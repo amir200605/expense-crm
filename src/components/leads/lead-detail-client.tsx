@@ -1,13 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -15,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, UserCheck } from "lucide-react";
+import { ArrowLeft, Trash2, UserCheck } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { getDispositionBadgeVariant, getStageBadgeVariant } from "@/lib/status-pill";
 
@@ -61,6 +71,29 @@ async function fetchTeam(): Promise<{ members: TeamMember[] }> {
   return res.json();
 }
 
+export type LeadSmsMessage = {
+  id: string;
+  createdAt: string;
+  to: string | null;
+  message: string | null;
+  sendTo: string | null;
+  sent: boolean;
+  source: string;
+  sentByName: string | null;
+};
+
+async function fetchLeadSms(leadId: string): Promise<{ messages: LeadSmsMessage[] }> {
+  const res = await fetch(`/api/leads/${leadId}/sms`);
+  if (!res.ok) throw new Error("Failed to load SMS history");
+  return res.json();
+}
+
+function smsSourceLabel(source: string) {
+  if (source === "client_welcome") return "Welcome SMS (client)";
+  if (source === "automation") return "Automation";
+  return source.replace(/_/g, " ");
+}
+
 export function LeadDetailClient({
   leadId,
   initialLead,
@@ -70,10 +103,18 @@ export function LeadDetailClient({
 }) {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { data: session } = useSession();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
   const { data: lead, isLoading } = useQuery({
     queryKey: ["lead", leadId],
     queryFn: () => fetchLead(leadId),
     initialData: initialLead,
+  });
+
+  const { data: smsData, isLoading: smsLoading } = useQuery({
+    queryKey: ["lead-sms", leadId],
+    queryFn: () => fetchLeadSms(leadId),
   });
 
   const { data: teamData } = useQuery({
@@ -113,6 +154,27 @@ export function LeadDetailClient({
       queryClient.invalidateQueries({ queryKey: ["leads"] });
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/leads/${leadId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Failed to delete lead");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      router.push("/leads");
+      router.refresh();
+    },
+  });
+
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  const canDeleteLead =
+    Boolean(role) &&
+    role !== "QA_COMPLIANCE" &&
+    ["SUPER_ADMIN", "AGENCY_OWNER", "MANAGER", "AGENT"].includes(role ?? "");
 
   if (isLoading && !lead) {
     return (
@@ -155,8 +217,46 @@ export function LeadDetailClient({
           <Button variant="outline" asChild>
             <Link href={`/leads?edit=${leadId}`}>Edit</Link>
           </Button>
+          {canDeleteLead && (
+            <Button
+              type="button"
+              variant="outline"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+          )}
         </div>
       </div>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this lead?</DialogTitle>
+            <DialogDescription>
+              This permanently removes {name || "this lead"} and related data you’re allowed to delete. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteMutation.isError && (
+            <p className="text-sm text-destructive">{deleteMutation.error.message}</p>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate()}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete lead"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Tabs defaultValue="overview">
         <TabsList className="bg-muted/30">
@@ -267,11 +367,52 @@ export function LeadDetailClient({
         <TabsContent value="communications">
           <Card className="border-border/80 shadow-soft">
             <CardHeader>
-              <CardTitle>Communications</CardTitle>
-              <CardDescription>SMS and email history</CardDescription>
+              <CardTitle>Text messages (SMS)</CardTitle>
+              <CardDescription>
+                Outbound SMS tied to this lead (automations, and welcome SMS when the lead was converted to a client with Telnyx configured).
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">No messages yet.</p>
+            <CardContent className="space-y-4">
+              {smsLoading ? (
+                <Skeleton className="h-24 w-full rounded-lg" />
+              ) : !smsData?.messages?.length ? (
+                <p className="text-sm text-muted-foreground">No SMS logged for this lead yet.</p>
+              ) : (
+                <ul className="space-y-4">
+                  {smsData.messages.map((m) => (
+                    <li
+                      key={m.id}
+                      className="rounded-xl border border-border/80 bg-muted/20 p-4 text-sm"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2">
+                        <span className="font-medium text-foreground">{formatDateTime(m.createdAt)}</span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary" className="font-normal">
+                            {smsSourceLabel(m.source)}
+                          </Badge>
+                          {!m.sent && (
+                            <Badge variant="destructive" className="text-xs">
+                              Not sent
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        To: <span className="font-mono text-foreground">{m.to ?? "—"}</span>
+                        {m.sendTo && (
+                          <span className="ml-2">· Target: {m.sendTo.replace(/_/g, " ")}</span>
+                        )}
+                        {m.sentByName && <span className="ml-2">· By {m.sentByName}</span>}
+                      </p>
+                      {m.message && (
+                        <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-background/80 p-3 text-xs leading-relaxed text-foreground">
+                          {m.message}
+                        </pre>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

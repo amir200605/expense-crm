@@ -56,6 +56,8 @@ export async function sendClientWelcomeSms(params: {
   client: ClientLike;
   policy?: PolicyLike;
   agentName: string;
+  /** When the client was created from a lead, log the SMS on that lead’s communications. */
+  logToLead?: { leadId: string; userId: string | null };
 }) {
   const agency = await prisma.agency.findUnique({
     where: { id: params.agencyId },
@@ -117,6 +119,23 @@ TransAmerica 877-234-4848`;
       text: message,
     }) as Parameters<typeof telnyx.messages.send>[0],
   );
+
+  if (params.logToLead?.leadId) {
+    await prisma.activityLog.create({
+      data: {
+        userId: params.logToLead.userId,
+        action: "SMS_SENT",
+        entityType: "Lead",
+        entityId: params.logToLead.leadId,
+        newValue: {
+          to: params.client.phone,
+          message,
+          sent: true,
+          source: "client_welcome",
+        },
+      },
+    });
+  }
 
   return { sent: true as const };
 }
