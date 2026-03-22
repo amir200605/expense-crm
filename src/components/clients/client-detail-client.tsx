@@ -20,12 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
-
-async function fetchClient(id: string) {
-  const res = await fetch(`/api/clients/${id}`);
-  if (!res.ok) throw new Error("Failed to fetch client");
-  return res.json();
-}
+import { CLIENT_DETAIL_STALE_MS, fetchClientById } from "@/lib/queries/clients";
 
 export function ClientDetailClient({
   clientId,
@@ -60,10 +55,10 @@ export function ClientDetailClient({
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["client", clientId],
-    queryFn: () => fetchClient(clientId),
+    queryFn: () => fetchClientById(clientId),
     initialData: initialClient,
     initialDataUpdatedAt: Date.now(),
-    staleTime: 120_000,
+    staleTime: CLIENT_DETAIL_STALE_MS,
   });
 
   const deleteMutation = useMutation({

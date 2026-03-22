@@ -59,8 +59,34 @@ export async function getClientById(id: string) {
   return prisma.client.findUnique({
     where: { id },
     include: {
-      lead: true,
-      policies: true,
+      // Avoid loading full Lead (can include large fields); detail UI only needs link context.
+      lead: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          disposition: true,
+          pipelineStage: true,
+        },
+      },
+      policies: {
+        orderBy: { updatedAt: "desc" },
+        take: 100,
+        select: {
+          id: true,
+          policyNumber: true,
+          carrier: true,
+          productName: true,
+          policyStatus: true,
+          faceAmount: true,
+          premium: true,
+          modalPremium: true,
+          effectiveDate: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
       agency: { select: { id: true, name: true } },
     },
   });

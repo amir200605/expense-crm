@@ -149,10 +149,11 @@ export async function updateLead(id: string, input: UpdateLeadInput) {
 export async function getLeadById(id: string) {
   return prisma.lead.findUnique({
     where: { id },
+    omit: { rawPayload: true },
     include: {
       assignedAgent: { select: { id: true, name: true, email: true } },
       assignedManager: { select: { id: true, name: true, email: true } },
-      tags: { include: { tag: true } },
+      tags: { take: 80, include: { tag: true } },
       agency: { select: { id: true, name: true } },
       client: { select: { id: true } },
     },

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { prefetchClientDetail } from "@/lib/queries/clients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +24,7 @@ async function fetchClients(params: { page?: number; search?: string }) {
 }
 
 export default function ClientsPage() {
+  const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -31,6 +33,7 @@ export default function ClientsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["clients", page, searchDebounced],
     queryFn: () => fetchClients({ page, search: searchDebounced || undefined }),
+    staleTime: 45_000,
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -97,7 +100,10 @@ export default function ClientsPage() {
                   </TableHeader>
                   <TableBody>
                     {items.map((client: { id: string; firstName: string; lastName: string; phone: string; email: string | null; carrier: string | null }) => (
-                      <TableRow key={client.id}>
+                      <TableRow
+                        key={client.id}
+                        onMouseEnter={() => prefetchClientDetail(queryClient, client.id)}
+                      >
                         <TableCell>
                           <Link href={`/clients/${client.id}`} className="font-medium text-primary hover:underline">
                             {client.firstName} {client.lastName}
@@ -107,7 +113,12 @@ export default function ClientsPage() {
                         <TableCell className="text-muted-foreground">{client.email ?? "—"}</TableCell>
                         <TableCell className="text-muted-foreground">{client.carrier ?? "—"}</TableCell>
                         <TableCell>
-                          <Link href={`/clients/${client.id}`}><Button variant="ghost" size="sm">View</Button></Link>
+                          <Link
+                            href={`/clients/${client.id}`}
+                            onMouseEnter={() => prefetchClientDetail(queryClient, client.id)}
+                          >
+                            <Button variant="ghost" size="sm">View</Button>
+                          </Link>
                         </TableCell>
                       </TableRow>
                     ))}
