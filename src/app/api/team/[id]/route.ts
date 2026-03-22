@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canManageAgency } from "@/lib/permissions";
 import type { SessionUser } from "@/lib/permissions";
+import { resolveAgencyIdForSession } from "@/lib/session-agency";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -18,14 +19,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = session.user as SessionUser;
-  const agencyId = user.agencyId;
-  if (!agencyId || !canManageAgency(session, agencyId)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const { id } = await params;
   const target = await prisma.user.findUnique({ where: { id } });
-  if (!target || target.agencyId !== agencyId) {
+  if (!target?.agencyId) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+  const sessionAgencyId = await resolveAgencyIdForSession(user);
+  if (!canManageAgency(session, target.agencyId)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (user.role !== "SUPER_ADMIN" && sessionAgencyId && target.agencyId !== sessionAgencyId) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
@@ -43,22 +46,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const updated = await prisma.user.update({
     where: { id },
     data: parsed.data,
-    select: { id: true, name: true, email: true, role: true, username: true },
+    select: { id: true, name: true, email: true, role: true, username: true, avatarUrl: true },
   });
 
   return NextResponse.json({ user: updated });
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = session.user as SessionUser;
-  const agencyId = user.agencyId;
-  if (!agencyId || !canManageAgency(session, agencyId)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const { id } = await params;
 
   if (id === user.id) {
@@ -66,7 +64,14 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   }
 
   const target = await prisma.user.findUnique({ where: { id } });
-  if (!target || target.agencyId !== agencyId) {
+  if (!target?.agencyId) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+  const sessionAgencyId = await resolveAgencyIdForSession(user);
+  if (!canManageAgency(session, target.agencyId)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (user.role !== "SUPER_ADMIN" && sessionAgencyId && target.agencyId !== sessionAgencyId) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 

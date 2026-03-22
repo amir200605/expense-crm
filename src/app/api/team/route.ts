@@ -30,6 +30,7 @@ export async function GET() {
       email: true,
       role: true,
       username: true,
+      avatarUrl: true,
     },
     orderBy: { createdAt: "desc" },
   });
