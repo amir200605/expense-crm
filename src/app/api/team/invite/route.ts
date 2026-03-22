@@ -17,6 +17,8 @@ const inviteSchema = z.object({
     .max(64, "Username is too long"),
   password: z.string().min(8),
   role: z.enum(["AGENT", "MANAGER"]),
+  phone: z.string().trim().optional(),
+  npnNumber: z.string().trim().optional(),
 });
 
 /**
@@ -48,7 +50,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, username, password, role } = parsed.data;
+    const { name, username, password, role, phone, npnNumber } = parsed.data;
     const normalized = username.toLowerCase();
 
     const existing = await prisma.user.findFirst({
@@ -70,6 +72,8 @@ export async function POST(req: Request) {
         password: hashed,
         agencyId,
         role,
+        phone: phone || null,
+        npnNumber: npnNumber || null,
       },
     });
     return NextResponse.json({ ok: true });

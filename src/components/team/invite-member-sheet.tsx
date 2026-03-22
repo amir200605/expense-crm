@@ -27,6 +27,8 @@ async function inviteMember(data: {
   username: string;
   password: string;
   role: string;
+  phone?: string;
+  npnNumber?: string;
 }) {
   const res = await fetch("/api/team/invite", {
     method: "POST",
@@ -78,7 +80,7 @@ export function InviteMemberSheet({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    mutation.mutate({ name, username, password, role });
+    mutation.mutate({ name, username, password, role, phone: phone.trim() || undefined, npnNumber: licenseNumber.trim() || undefined });
   }
 
   return (
