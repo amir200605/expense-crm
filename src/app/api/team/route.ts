@@ -31,6 +31,8 @@ export async function GET() {
       role: true,
       username: true,
       avatarUrl: true,
+      phone: true,
+      npnNumber: true,
     },
     orderBy: { createdAt: "desc" },
   });

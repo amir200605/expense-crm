@@ -30,6 +30,8 @@ interface Member {
   role: string;
   username: string | null;
   avatarUrl: string | null;
+  phone: string | null;
+  npnNumber: string | null;
 }
 
 function memberInitials(m: Member) {
@@ -58,6 +60,8 @@ export default function TeamPage() {
   const [editUsername, setEditUsername] = useState("");
   /** Must match a SelectItem value — never "" or Radix warns (uncontrolled/controlled). */
   const [editRole, setEditRole] = useState<"AGENT" | "MANAGER" | "AGENCY_OWNER">("AGENT");
+  const [editPhone, setEditPhone] = useState("");
+  const [editNpn, setEditNpn] = useState("");
   const [saveMsg, setSaveMsg] = useState("");
   const [cropOpen, setCropOpen] = useState(false);
   const [cropMemberId, setCropMemberId] = useState<string | null>(null);
@@ -70,11 +74,11 @@ export default function TeamPage() {
   const members = data?.members ?? [];
 
   const updateMutation = useMutation({
-    mutationFn: async (payload: { id: string; name: string; username: string; role: string }) => {
+    mutationFn: async (payload: { id: string; name: string; username: string; role: string; phone: string; npnNumber: string }) => {
       const res = await fetch(`/api/team/${payload.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: payload.name, username: payload.username, role: payload.role }),
+        body: JSON.stringify({ name: payload.name, username: payload.username, role: payload.role, phone: payload.phone || null, npnNumber: payload.npnNumber || null }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -125,6 +129,8 @@ export default function TeamPage() {
     setEditRole(
       r === "AGENT" || r === "MANAGER" || r === "AGENCY_OWNER" ? r : "AGENT"
     );
+    setEditPhone(m.phone ?? "");
+    setEditNpn(m.npnNumber ?? "");
     setSaveMsg("");
     setEditOpen(true);
   }
@@ -319,6 +325,14 @@ export default function TeamPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="(877) 864-9126" />
+            </div>
+            <div className="space-y-2">
+              <Label>License / NPN</Label>
+              <Input value={editNpn} onChange={(e) => setEditNpn(e.target.value)} placeholder="20062397" />
+            </div>
             {updateMutation.isError && (
               <p className="text-sm text-destructive">{updateMutation.error.message}</p>
             )}
@@ -330,7 +344,7 @@ export default function TeamPage() {
           <SheetFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
             <Button
-              onClick={() => editMember && updateMutation.mutate({ id: editMember.id, name: editName, username: editUsername, role: editRole })}
+              onClick={() => editMember && updateMutation.mutate({ id: editMember.id, name: editName, username: editUsername, role: editRole, phone: editPhone, npnNumber: editNpn })}
               disabled={updateMutation.isPending}
             >
               {updateMutation.isPending ? "Saving…" : "Save changes"}
