@@ -229,9 +229,6 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
             className="flex w-full items-center justify-between px-3 py-3 text-left"
           >
             <div className="flex min-w-0 items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary/40 text-sm font-semibold text-primary">
-                {firstLetter}
-              </div>
               <div className="min-w-0 text-xs text-sidebar-muted">
                 <p className="truncate text-sm font-semibold uppercase tracking-wide text-sidebar-foreground">
                   {displayName}
