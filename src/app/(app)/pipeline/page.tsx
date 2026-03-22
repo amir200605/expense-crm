@@ -1,7 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { prefetchLeadDetail } from "@/lib/queries/leads";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,7 +31,12 @@ const STAGE_LABELS: Record<string, string> = {
 };
 
 export default function PipelinePage() {
-  const { data, isLoading } = useQuery({ queryKey: ["pipeline"], queryFn: fetchPipeline });
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["pipeline"],
+    queryFn: fetchPipeline,
+    staleTime: 45_000,
+  });
   const stages = data?.stages ?? [];
   const byStage = data?.byStage ?? {};
   const totalLeads = stages.reduce((acc: number, s: string) => acc + (byStage[s] ?? []).length, 0);
@@ -73,7 +79,11 @@ export default function PipelinePage() {
                   </div>
                 ) : (
                   stageLeads.map((lead: { id: string; fullName: string | null; firstName: string; lastName: string; phone: string; disposition?: string; assignedAgent: { name: string | null } | null }) => (
-                    <Link key={lead.id} href={`/leads/${lead.id}`}>
+                    <Link
+                      key={lead.id}
+                      href={`/leads/${lead.id}`}
+                      onMouseEnter={() => prefetchLeadDetail(queryClient, lead.id)}
+                    >
                       <div className="rounded-lg border border-border/80 bg-card p-3 text-sm shadow-soft transition-colors hover:bg-muted/30 hover:border-primary/30">
                         <p className="font-medium truncate text-heading">{lead.fullName || `${lead.firstName} ${lead.lastName}`}</p>
                         <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">

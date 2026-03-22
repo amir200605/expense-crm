@@ -38,6 +38,7 @@ import { Plus, Search, Trash2, Users, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { getDispositionBadgeVariant, getStageBadgeVariant } from "@/lib/status-pill";
 import { LeadFormSheet } from "@/components/leads/lead-form-sheet";
+import { prefetchLeadDetail } from "@/lib/queries/leads";
 
 interface TeamMember {
   id: string;
@@ -105,12 +106,13 @@ export default function LeadsPage() {
         disposition: disposition || undefined,
         pipelineStage: pipelineStage || undefined,
       }),
+    staleTime: 45_000,
   });
 
   const { data: teamData } = useQuery({
     queryKey: ["team"],
     queryFn: fetchTeam,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
 
   const agents = (teamData?.members ?? []).filter(
@@ -271,7 +273,10 @@ export default function LeadsPage() {
                   </TableHeader>
                   <TableBody>
                     {items.map((lead: { id: string; fullName: string; firstName: string; lastName: string; phone: string; email: string | null; disposition: string; pipelineStage: string; assignedAgent: { id?: string; name: string | null } | null; assignedAgentId: string | null; lastContactedAt: string | null }) => (
-                      <TableRow key={lead.id}>
+                      <TableRow
+                        key={lead.id}
+                        onMouseEnter={() => prefetchLeadDetail(queryClient, lead.id)}
+                      >
                         <TableCell>
                           <Link href={`/leads/${lead.id}`} className="font-medium text-primary hover:underline">
                             {lead.fullName || `${lead.firstName} ${lead.lastName}`}
@@ -305,7 +310,10 @@ export default function LeadsPage() {
                         <TableCell className="text-muted-foreground text-sm">{lead.lastContactedAt ? formatDate(lead.lastContactedAt) : "—"}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Link href={`/leads/${lead.id}`}>
+                            <Link
+                              href={`/leads/${lead.id}`}
+                              onMouseEnter={() => prefetchLeadDetail(queryClient, lead.id)}
+                            >
                               <Button variant="ghost" size="sm">View</Button>
                             </Link>
                             {showDeleteLead && (

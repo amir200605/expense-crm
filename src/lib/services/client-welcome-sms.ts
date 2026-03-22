@@ -1,6 +1,7 @@
 import Telnyx from "telnyx";
 import { prisma } from "@/lib/db";
 import { resolveTelnyxFromNumber } from "@/lib/integration-env";
+import { normalizePhoneToE164 } from "@/lib/phone-e164";
 import { buildTelnyxSendParams, getTelnyxApiKey } from "@/lib/telnyx-env";
 
 type PolicyLike = {
@@ -98,16 +99,35 @@ export async function sendClientWelcomeSms(params: {
   const apiKey = getTelnyxApiKey();
   const phone = params.client.phone?.trim() ?? "";
 
-  if (!apiKey || !fromNumber || !phone) {
+  if (!apiKey || !fromNumber) {
     const explanation = !apiKey
       ? "Telnyx API key is not set. Add TELNYX_API_KEY in your host secrets (e.g. Replit) and/or configure it under Settings → Integrations."
-      : !fromNumber
-        ? "SMS “From” number is not set. Add it under Settings → Integrations (Telnyx) or set TELNYX_FROM_NUMBER in environment."
-        : "This client has no phone number, so no welcome SMS was sent.";
+      : "SMS “From” number is not set. Add it under Settings → Integrations (Telnyx) or set TELNYX_FROM_NUMBER in environment.";
     await logWelcomeSmsOnLead({
       logToLead: params.logToLead,
       to: phone || null,
       body: `Welcome SMS was not sent. ${explanation}`,
+      sent: false,
+    });
+    return { sent: false, reason: "missing_telnyx_or_phone" };
+  }
+
+  if (!phone) {
+    await logWelcomeSmsOnLead({
+      logToLead: params.logToLead,
+      to: null,
+      body: "Welcome SMS was not sent: this client has no phone number on file.",
+      sent: false,
+    });
+    return { sent: false, reason: "missing_telnyx_or_phone" };
+  }
+
+  const e164To = normalizePhoneToE164(phone);
+  if (!e164To) {
+    await logWelcomeSmsOnLead({
+      logToLead: params.logToLead,
+      to: phone,
+      body: `Welcome SMS was not sent: phone number could not be converted to E.164 for Telnyx (error 40310). Stored value: ${JSON.stringify(phone)}. Use 10 digits (e.g. 5614515321) or E.164 (+15614515321). Remove letters and extra numbers.`,
       sent: false,
     });
     return { sent: false, reason: "missing_telnyx_or_phone" };
@@ -153,19 +173,33 @@ Mutual of Omaha 800-775-7896
 TransAmerica 877-234-4848`;
 
   const telnyx = new Telnyx({ apiKey });
+  let sendParams: ReturnType<typeof buildTelnyxSendParams>;
+  try {
+    sendParams = buildTelnyxSendParams({
+      from: fromNumber,
+      to: phone,
+      text: message,
+    }) as ReturnType<typeof buildTelnyxSendParams>;
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e);
+    await logWelcomeSmsOnLead({
+      logToLead: params.logToLead,
+      to: e164To,
+      body: `Welcome SMS was not sent: ${detail}`,
+      sent: false,
+    });
+    return { sent: false, reason: "missing_telnyx_or_phone", detail };
+  }
+
   try {
     await telnyx.messages.send(
-      buildTelnyxSendParams({
-        from: fromNumber,
-        to: phone,
-        text: message,
-      }) as Parameters<typeof telnyx.messages.send>[0],
+      sendParams as Parameters<typeof telnyx.messages.send>[0],
     );
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
     await logWelcomeSmsOnLead({
       logToLead: params.logToLead,
-      to: phone,
+      to: e164To,
       body: `Welcome SMS failed to send (Telnyx error): ${detail}`,
       sent: false,
     });
@@ -174,7 +208,7 @@ TransAmerica 877-234-4848`;
 
   await logWelcomeSmsOnLead({
     logToLead: params.logToLead,
-    to: phone,
+    to: e164To,
     body: message,
     sent: true,
   });

@@ -1,6 +1,7 @@
 import { loadEnvConfig } from "@next/env";
 import fs from "node:fs";
 import path from "node:path";
+import { normalizePhoneToE164 } from "@/lib/phone-e164";
 
 // Load .env / .env.local from project root (idempotent; helps server code see vars consistently)
 if (typeof process !== "undefined") {
@@ -79,10 +80,23 @@ export function getTelnyxMessagingProfileId(): string | undefined {
   return getSecret(ENV_TELNYX_MESSAGING_PROFILE_ID);
 }
 
-/** Shared payload for `telnyx.messages.send` */
+/** Shared payload for `telnyx.messages.send` — normalizes from/to to E.164 (Telnyx requirement). */
 export function buildTelnyxSendParams(args: { from: string; to: string; text: string }) {
   const messaging_profile_id = getTelnyxMessagingProfileId();
+  const to = normalizePhoneToE164(args.to);
+  if (!to) {
+    throw new Error(
+      `Invalid destination phone "${args.to}". Use 10 digits (e.g. 5614515321) or E.164 (+15614515321). No letters or multiple numbers.`
+    );
+  }
+  const from = normalizePhoneToE164(args.from);
+  if (!from) {
+    throw new Error(
+      `Invalid From phone "${args.from}". Use E.164 in Settings → Integrations or TELNYX_FROM_NUMBER (e.g. +15614515321).`
+    );
+  }
+  const payload = { from, to, text: args.text };
   return messaging_profile_id
-    ? { ...args, messaging_profile_id }
-    : args;
+    ? { ...payload, messaging_profile_id }
+    : payload;
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { prefetchLeadDetail } from "@/lib/queries/leads";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,10 +26,12 @@ type NeedsAttentionCardProps = {
 };
 
 export function NeedsAttentionCard({ agencyId, managerId, agentId, title = "Leads needing attention" }: NeedsAttentionCardProps) {
+  const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["needs-attention", agencyId, managerId ?? "", agentId ?? ""],
     queryFn: () => fetchNeedsAttention({ agencyId, managerId, agentId }),
     enabled: !!agencyId,
+    staleTime: 60_000,
   });
 
   const leads = data?.leads ?? [];
@@ -70,6 +73,7 @@ export function NeedsAttentionCard({ agencyId, managerId, agentId, title = "Lead
               <li key={lead.id}>
                 <Link
                   href={`/leads/${lead.id}`}
+                  onMouseEnter={() => prefetchLeadDetail(queryClient, lead.id)}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-sm transition-colors hover:bg-muted/60 hover:border-primary/30"
                 >
                   <span className="font-medium text-foreground">{lead.fullName}</span>

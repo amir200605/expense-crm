@@ -9,7 +9,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { staleTime: 60 * 1000 },
+          queries: {
+            // Fewer surprise refetches; pages override when they need fresher data.
+            staleTime: 90 * 1000,
+            gcTime: 15 * 60 * 1000,
+            refetchOnWindowFocus: false,
+            retry: 1,
+          },
         },
       })
   );

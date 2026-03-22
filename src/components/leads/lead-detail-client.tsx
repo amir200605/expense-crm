@@ -28,6 +28,12 @@ import {
 import { ArrowLeft, Trash2, UserCheck } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { getDispositionBadgeVariant, getStageBadgeVariant } from "@/lib/status-pill";
+import {
+  fetchLeadById,
+  fetchLeadSms,
+  LEAD_DETAIL_STALE_MS,
+  TEAM_STALE_MS,
+} from "@/lib/queries/leads";
 
 interface TeamMember {
   id: string;
@@ -59,12 +65,6 @@ export type LeadDetail = {
   client?: { id: string } | null;
 };
 
-async function fetchLead(id: string) {
-  const res = await fetch(`/api/leads/${id}`);
-  if (!res.ok) throw new Error("Failed to fetch lead");
-  return res.json();
-}
-
 async function fetchTeam(): Promise<{ members: TeamMember[] }> {
   const res = await fetch("/api/team");
   if (!res.ok) return { members: [] };
@@ -81,12 +81,6 @@ export type LeadSmsMessage = {
   source: string;
   sentByName: string | null;
 };
-
-async function fetchLeadSms(leadId: string): Promise<{ messages: LeadSmsMessage[] }> {
-  const res = await fetch(`/api/leads/${leadId}/sms`);
-  if (!res.ok) throw new Error("Failed to load SMS history");
-  return res.json();
-}
 
 function smsSourceLabel(source: string) {
   if (source === "client_welcome") return "Welcome SMS (client)";
@@ -105,22 +99,28 @@ export function LeadDetailClient({
   const router = useRouter();
   const { data: session } = useSession();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   const { data: lead, isLoading } = useQuery({
     queryKey: ["lead", leadId],
-    queryFn: () => fetchLead(leadId),
+    queryFn: () => fetchLeadById(leadId),
     initialData: initialLead,
+    // Without this, initialData is treated as immediately stale → extra refetch on every open.
+    initialDataUpdatedAt: Date.now(),
+    staleTime: LEAD_DETAIL_STALE_MS,
   });
 
   const { data: smsData, isLoading: smsLoading } = useQuery({
     queryKey: ["lead-sms", leadId],
     queryFn: () => fetchLeadSms(leadId),
+    enabled: activeTab === "communications",
+    staleTime: 60_000,
   });
 
   const { data: teamData } = useQuery({
     queryKey: ["team"],
     queryFn: fetchTeam,
-    staleTime: 60_000,
+    staleTime: TEAM_STALE_MS,
   });
 
   const agents = (teamData?.members ?? []).filter(
@@ -259,7 +259,7 @@ export function LeadDetailClient({
         </DialogContent>
       </Dialog>
 
-      <Tabs defaultValue="overview">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-muted/30">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
@@ -383,7 +383,7 @@ export function LeadDetailClient({
                 <p className="text-sm text-muted-foreground">No SMS logged for this lead yet.</p>
               ) : (
                 <ul className="space-y-4">
-                  {smsData.messages.map((m) => (
+                  {smsData.messages.map((m: LeadSmsMessage) => (
                     <li
                       key={m.id}
                       className="rounded-xl border border-border/80 bg-muted/20 p-4 text-sm"
