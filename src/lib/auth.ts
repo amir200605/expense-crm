@@ -47,6 +47,8 @@ export const authOptions: NextAuthOptions = {
           username: user.username,
           role: user.role,
           agencyId: user.agencyId,
+          phone: user.phone,
+          npnNumber: user.npnNumber,
         };
       },
     }),
@@ -58,6 +60,8 @@ export const authOptions: NextAuthOptions = {
         token.username = (user as { username?: string }).username;
         token.role = (user as { role?: string }).role;
         token.agencyId = (user as { agencyId?: string }).agencyId;
+        token.phone = (user as { phone?: string }).phone;
+        token.npnNumber = (user as { npnNumber?: string }).npnNumber;
       }
       return token;
     },
@@ -67,6 +71,8 @@ export const authOptions: NextAuthOptions = {
         (session.user as { username?: string }).username = token.username as string | undefined;
         (session.user as { role?: string }).role = token.role as string;
         (session.user as { agencyId?: string }).agencyId = token.agencyId as string;
+        (session.user as { phone?: string }).phone = token.phone as string | undefined;
+        (session.user as { npnNumber?: string }).npnNumber = token.npnNumber as string | undefined;
       }
       return session;
     },

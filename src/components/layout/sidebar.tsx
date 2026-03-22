@@ -220,7 +220,7 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
       </nav>
       <div className="border-t border-white/10 p-3">
         <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
-          <div className="bg-primary px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary-foreground">
+          <div className="bg-primary px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary-foreground whitespace-nowrap">
             Prime Insurance Agency
           </div>
           <button
@@ -234,8 +234,8 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
                   {displayName}
                 </p>
                 <p className="uppercase">{displayRole}</p>
-                <p className="truncate">Username: {user?.username ?? "pending"}</p>
-                <p className="truncate">Insurance ID: {insuranceId}</p>
+                <p className="truncate">{user?.phone ?? ""}</p>
+                <p className="truncate">NPN: {user?.npnNumber ?? "pending"}</p>
               </div>
             </div>
             <ChevronDown className={cn("h-4 w-4 text-sidebar-muted transition-transform", profileOpen && "rotate-180")} />

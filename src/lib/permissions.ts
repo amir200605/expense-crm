@@ -6,6 +6,8 @@ export type SessionUser = Session["user"] & {
   username?: string | null;
   role?: Role;
   agencyId?: string | null;
+  phone?: string | null;
+  npnNumber?: string | null;
 };
 
 export function isSuperAdmin(session: Session | null): boolean {
