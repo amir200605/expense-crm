@@ -67,6 +67,7 @@ After seeding you can sign in with:
 | `npm run db:push` | Push schema (no migrations) |
 | `npm run db:migrate` | Run migrations        |
 | `npm run db:seed` | Seed database          |
+| `npm run db:trim` | Delete all but 2 oldest clients & 2 oldest leads (demo cleanup) |
 | `npm run db:studio` | Open Prisma Studio   |
 
 ## Roles
