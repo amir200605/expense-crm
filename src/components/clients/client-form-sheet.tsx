@@ -31,7 +31,9 @@ async function createClientApi(data: CreateClientInput) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? "Failed to create client");
+    const base = err.error ?? "Failed to create client";
+    const hint = typeof err.hint === "string" ? ` ${err.hint}` : "";
+    throw new Error(`${base}${hint}`);
   }
   return res.json();
 }
