@@ -27,6 +27,10 @@ export async function createClient(agencyId: string, input: CreateClientInput, l
   });
 }
 
+export async function deleteClient(id: string) {
+  return prisma.client.delete({ where: { id } });
+}
+
 export async function updateClient(id: string, input: UpdateClientInput) {
   return prisma.client.update({
     where: { id },

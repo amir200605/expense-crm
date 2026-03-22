@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { canViewClient, canEditClient } from "@/lib/permissions";
-import { getClientById, updateClient } from "@/lib/services/client.service";
+import { deleteClient, getClientById, updateClient } from "@/lib/services/client.service";
 import { updateClientSchema } from "@/lib/validations/client";
 import type { SessionUser } from "@/lib/permissions";
 
@@ -30,4 +30,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
   const updated = await updateClient(id, parsed.data);
   return NextResponse.json(updated);
+}
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id } = await params;
+  const client = await getClientById(id);
+  if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
+  if (!canEditClient(session, client)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  try {
+    await deleteClient(id);
+  } catch (e) {
+    console.error("DELETE /api/clients/[id]", e);
+    return NextResponse.json(
+      { error: "Could not delete client. It may still be referenced by other records." },
+      { status: 500 }
+    );
+  }
+  return new NextResponse(null, { status: 204 });
 }

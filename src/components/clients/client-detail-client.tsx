@@ -1,13 +1,24 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
 async function fetchClient(id: string) {
@@ -42,11 +53,39 @@ export function ClientDetailClient({
     policies: unknown[];
   };
 }) {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
   const { data: client, isLoading } = useQuery({
     queryKey: ["client", clientId],
     queryFn: () => fetchClient(clientId),
     initialData: initialClient,
+    initialDataUpdatedAt: Date.now(),
+    staleTime: 120_000,
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/clients/${clientId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Failed to delete client");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      router.push("/clients");
+      router.refresh();
+    },
+  });
+
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  const canDeleteClient =
+    Boolean(role) &&
+    role !== "QA_COMPLIANCE" &&
+    ["SUPER_ADMIN", "AGENCY_OWNER", "MANAGER", "AGENT"].includes(role ?? "");
 
   if (isLoading && !client) {
     return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64 w-full" /></div>;
@@ -73,12 +112,53 @@ export function ClientDetailClient({
             </div>
           </div>
         </div>
-        {client?.linkedLeadId && (
-          <Button variant="outline" asChild className="shrink-0">
-            <Link href={`/leads/${client.linkedLeadId}`}>View linked lead</Link>
-          </Button>
-        )}
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {client?.linkedLeadId && (
+            <Button variant="outline" asChild>
+              <Link href={`/leads/${client.linkedLeadId}`}>View linked lead</Link>
+            </Button>
+          )}
+          {canDeleteClient && (
+            <Button
+              type="button"
+              variant="outline"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this client?</DialogTitle>
+            <DialogDescription>
+              This removes {name || "this client"} and related policies, commissions, and messages for this record.
+              The original lead (if any) will remain. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteMutation.isError && (
+            <p className="text-sm text-destructive">{deleteMutation.error.message}</p>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate()}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete client"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Tabs defaultValue="overview">
         <TabsList className="bg-muted/30">
           <TabsTrigger value="overview">Overview</TabsTrigger>
