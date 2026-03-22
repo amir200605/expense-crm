@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, startTransition } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -52,6 +52,16 @@ export function ClientDetailClient({
   const router = useRouter();
   const { data: session } = useSession();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [keepPoliciesMounted, setKeepPoliciesMounted] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "policies") setKeepPoliciesMounted(true);
+  }, [activeTab]);
+
+  const onTabChange = useCallback((value: string) => {
+    startTransition(() => setActiveTab(value));
+  }, []);
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["client", clientId],
@@ -154,13 +164,13 @@ export function ClientDetailClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Tabs defaultValue="overview">
+      <Tabs value={activeTab} onValueChange={onTabChange}>
         <TabsList className="bg-muted/30">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="policies">Policies</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
-        <TabsContent value="overview" className="space-y-4">
+        <TabsContent value="overview" forceMount className="space-y-4">
           <Card className="border-border/80 shadow-soft">
             <CardHeader><CardTitle className="text-base">Summary</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -174,7 +184,7 @@ export function ClientDetailClient({
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="policies">
+        <TabsContent value="policies" {...(keepPoliciesMounted ? { forceMount: true as const } : {})}>
           <Card className="border-border/80 shadow-soft">
             <CardHeader><CardTitle>Policies</CardTitle><CardDescription>Policy list</CardDescription></CardHeader>
             <CardContent>

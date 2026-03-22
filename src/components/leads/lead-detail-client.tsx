@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, startTransition } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -100,6 +100,16 @@ export function LeadDetailClient({
   const { data: session } = useSession();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  /** After first open, keep these panels mounted so switching tabs doesn't remount heavy trees (Select, SMS list). */
+  const [keepCommsMounted, setKeepCommsMounted] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "communications") setKeepCommsMounted(true);
+  }, [activeTab]);
+
+  const onTabChange = useCallback((value: string) => {
+    startTransition(() => setActiveTab(value));
+  }, []);
 
   const { data: lead, isLoading } = useQuery({
     queryKey: ["lead", leadId],
@@ -259,14 +269,14 @@ export function LeadDetailClient({
         </DialogContent>
       </Dialog>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={onTabChange}>
         <TabsList className="bg-muted/30">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="communications">Communications</TabsTrigger>
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
         </TabsList>
-        <TabsContent value="overview" className="space-y-4">
+        <TabsContent value="overview" forceMount className="space-y-4">
           {/* Assign Agent Card */}
           <Card className="border-border/80 shadow-soft">
             <CardHeader className="pb-3">
@@ -365,7 +375,7 @@ export function LeadDetailClient({
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="communications">
+        <TabsContent value="communications" {...(keepCommsMounted ? { forceMount: true as const } : {})}>
           <Card className="border-border/80 shadow-soft">
             <CardHeader>
               <CardTitle>Text messages (SMS)</CardTitle>
