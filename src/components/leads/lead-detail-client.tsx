@@ -351,6 +351,26 @@ export function LeadDetailClient({
                 <p className="text-sm">{lead?.source ?? "—"}</p>
               </div>
               <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Carrier</p>
+                <p className="text-sm">{String(extra.carrierQuoted ?? "—")}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Lead type</p>
+                <p className="text-sm">{String(extra.leadType ?? "—")}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Coverage amount wanted</p>
+                <p className="text-sm">{String(extra.coverageAmountInterest ?? "—")}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Preferred contact</p>
+                <p className="text-sm">{String(extra.preferredContactMethod ?? "—")}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Best time to call</p>
+                <p className="text-sm">{String(extra.bestTimeToCall ?? extra.bestCallTime ?? "—")}</p>
+              </div>
+              <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Last contacted</p>
                 <p className="text-sm">{lead?.lastContactedAt ? formatDateTime(lead.lastContactedAt) : "—"}</p>
               </div>
