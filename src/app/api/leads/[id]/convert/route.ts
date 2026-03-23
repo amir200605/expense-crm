@@ -10,13 +10,18 @@ import type { SessionUser } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: leadId } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const { id: leadId } = await params;
     const lead = await getLeadById(leadId);
     if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
-    if (!canEditLead(session, lead)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!canEditLead(session, lead)) {
+      return NextResponse.json(
+        { error: "You are not allowed to convert this lead. Assign the lead to your user or use a manager/owner account." },
+        { status: 403 }
+      );
+    }
     if (lead.client) {
       return NextResponse.json({ client: lead.client }, { status: 200 });
     }
@@ -62,7 +67,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     console.error("POST /api/leads/[id]/convert", e);
     if (e instanceof Prisma.PrismaClientKnownRequestError) {
       if (e.code === "P2002") {
-        const { id: leadId } = await params;
         const existingClient = await prisma.client.findUnique({
           where: { linkedLeadId: leadId },
           select: { id: true },

@@ -144,8 +144,11 @@ export function LeadDetailClient({
     mutationFn: async () => {
       const res = await fetch(`/api/leads/${leadId}/convert`, { method: "POST" });
       if (!res.ok) {
+        const cloned = res.clone();
         const err = await res.json().catch(() => ({})) as { error?: string; code?: string };
-        throw new Error(err.error ?? "Convert failed");
+        const fallbackText = await cloned.text().catch(() => "");
+        const msg = err.error ?? fallbackText || `Convert failed (${res.status})`;
+        throw new Error(msg);
       }
       return res.json();
     },
