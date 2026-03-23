@@ -234,10 +234,7 @@ export async function sendClientWelcomeSms(params: {
     : ((leadVars.draftDate ?? "").trim() || "N/A");
   const carrierFromForm = (leadVars.carrierQuoted ?? "").trim();
   const carrierName = carrierFromForm || params.policy?.carrier || params.client.carrier || "N/A";
-  const mediaUrls: string[] = [];
-  if (params.agentCardImageUrl?.trim()) {
-    mediaUrls.push(params.agentCardImageUrl.trim());
-  }
+  const agentCardUrl = params.agentCardImageUrl?.trim() || null;
 
   const message = renderTemplate(template, {
     ...leadVars,
@@ -253,13 +250,13 @@ export async function sendClientWelcomeSms(params: {
   });
 
   const telnyx = new Telnyx({ apiKey });
-  let sendParams: ReturnType<typeof buildTelnyxSendParams>;
+
+  let textSendParams: ReturnType<typeof buildTelnyxSendParams>;
   try {
-    sendParams = buildTelnyxSendParams({
+    textSendParams = buildTelnyxSendParams({
       from: fromNumber,
       to: phone,
       text: message,
-      mediaUrls,
     }) as ReturnType<typeof buildTelnyxSendParams>;
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
@@ -274,18 +271,7 @@ export async function sendClientWelcomeSms(params: {
   }
 
   try {
-    if (mediaUrls.length > 0) {
-      try {
-        await telnyx.messages.sendLongCode(
-          sendParams as Parameters<typeof telnyx.messages.sendLongCode>[0],
-        );
-      } catch (longCodeErr) {
-        console.warn("[welcome-sms] sendLongCode failed, falling back to messages.send:", longCodeErr);
-        await telnyx.messages.send(sendParams as Parameters<typeof telnyx.messages.send>[0]);
-      }
-    } else {
-      await telnyx.messages.send(sendParams as Parameters<typeof telnyx.messages.send>[0]);
-    }
+    await telnyx.messages.send(textSendParams as Parameters<typeof telnyx.messages.send>[0]);
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
     await logWelcomeSmsOnLead({
@@ -298,12 +284,28 @@ export async function sendClientWelcomeSms(params: {
     return { sent: false, reason: "telnyx_api_error", detail };
   }
 
+  let mediaAttached = false;
+  if (agentCardUrl) {
+    try {
+      const mmsSendParams = buildTelnyxSendParams({
+        from: fromNumber,
+        to: phone,
+        text: "",
+        mediaUrls: [agentCardUrl],
+      }) as ReturnType<typeof buildTelnyxSendParams>;
+      await telnyx.messages.send(mmsSendParams as Parameters<typeof telnyx.messages.send>[0]);
+      mediaAttached = true;
+    } catch (mmsErr) {
+      console.warn("[welcome-sms] agent card MMS follow-up failed (text was sent OK):", mmsErr);
+    }
+  }
+
   await logWelcomeSmsOnLead({
     logToLead: params.logToLead,
     to: e164To,
     body: message,
     sent: true,
-    mediaAttached: mediaUrls.length > 0,
+    mediaAttached,
   });
 
   return { sent: true };
