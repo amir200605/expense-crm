@@ -253,13 +253,13 @@ export async function sendClientWelcomeSms(params: {
   });
 
   const telnyx = new Telnyx({ apiKey });
-
-  let textParams: ReturnType<typeof buildTelnyxSendParams>;
+  let sendParams: ReturnType<typeof buildTelnyxSendParams>;
   try {
-    textParams = buildTelnyxSendParams({
+    sendParams = buildTelnyxSendParams({
       from: fromNumber,
       to: phone,
       text: message,
+      mediaUrls,
     }) as ReturnType<typeof buildTelnyxSendParams>;
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
@@ -274,7 +274,18 @@ export async function sendClientWelcomeSms(params: {
   }
 
   try {
-    await telnyx.messages.send(textParams as Parameters<typeof telnyx.messages.send>[0]);
+    if (mediaUrls.length > 0) {
+      try {
+        await telnyx.messages.sendLongCode(
+          sendParams as Parameters<typeof telnyx.messages.sendLongCode>[0],
+        );
+      } catch (longCodeErr) {
+        console.warn("[welcome-sms] sendLongCode failed, falling back to messages.send:", longCodeErr);
+        await telnyx.messages.send(sendParams as Parameters<typeof telnyx.messages.send>[0]);
+      }
+    } else {
+      await telnyx.messages.send(sendParams as Parameters<typeof telnyx.messages.send>[0]);
+    }
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
     await logWelcomeSmsOnLead({
@@ -285,26 +296,6 @@ export async function sendClientWelcomeSms(params: {
       mediaAttached: false,
     });
     return { sent: false, reason: "telnyx_api_error", detail };
-  }
-
-  if (mediaUrls.length > 0) {
-    try {
-      const cardParams = buildTelnyxSendParams({
-        from: fromNumber,
-        to: phone,
-        text: "",
-        mediaUrls,
-      }) as ReturnType<typeof buildTelnyxSendParams>;
-      try {
-        await telnyx.messages.sendLongCode(
-          cardParams as Parameters<typeof telnyx.messages.sendLongCode>[0],
-        );
-      } catch {
-        await telnyx.messages.send(cardParams as Parameters<typeof telnyx.messages.send>[0]);
-      }
-    } catch (cardErr) {
-      console.warn("[welcome-sms] agent card MMS failed (text was sent):", cardErr);
-    }
   }
 
   await logWelcomeSmsOnLead({
