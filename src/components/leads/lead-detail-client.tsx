@@ -155,6 +155,24 @@ export function LeadDetailClient({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["lead", leadId] });
       queryClient.invalidateQueries({ queryKey: ["lead-sms", leadId] });
+      const ws = data?.welcomeSms as
+        | { sent: true }
+        | { sent: false; reason?: string; detail?: string }
+        | undefined;
+      if (ws && ws.sent === false) {
+        const hint =
+          ws.reason === "missing_telnyx_or_phone"
+            ? "Configure TELNYX_API_KEY and a From number (Settings → Integrations or env), and ensure the lead/client phone is valid (10 digits or E.164)."
+            : ws.reason === "telnyx_api_error"
+              ? "Telnyx rejected the send — check your API key, From number, and MMS settings."
+              : ws.reason === "exception"
+                ? "Server error while sending — check logs."
+                : "";
+        const extra = ws.detail ? `\n\n${ws.detail}` : "";
+        window.alert(
+          `Welcome SMS was not sent.${hint ? `\n\n${hint}` : ""}${extra}\n\nOpen Communications on this lead to see the logged reason.`
+        );
+      }
       if (data?.client?.id) router.push(`/clients/${data.client.id}`);
     },
   });

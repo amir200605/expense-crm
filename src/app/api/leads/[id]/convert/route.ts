@@ -37,8 +37,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           premiumAmount: true,
         },
       });
+      let welcomeSms = null as Awaited<ReturnType<typeof runClientWelcomeSmsAfterCreate>> | null;
       if (existingClient) {
-        await runClientWelcomeSmsAfterCreate({
+        welcomeSms = await runClientWelcomeSmsAfterCreate({
           agencyId: existingClient.agencyId,
           appBaseUrl,
           client: {
@@ -55,7 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           userEmail: user.email ?? null,
         });
       }
-      return NextResponse.json({ client: lead.client, resentWelcome: true }, { status: 200 });
+      return NextResponse.json({ client: lead.client, resentWelcome: true, welcomeSms }, { status: 200 });
     }
     const client = await createClient(lead.agencyId, {
       firstName: lead.firstName,
@@ -73,7 +74,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       linkedLeadId: leadId,
     }, leadId);
 
-    await runClientWelcomeSmsAfterCreate({
+    const welcomeSms = await runClientWelcomeSmsAfterCreate({
       agencyId: lead.agencyId,
       appBaseUrl,
       client: {
@@ -94,7 +95,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       where: { id: leadId },
       data: { disposition: "SOLD", pipelineStage: "PLACED" },
     });
-    return NextResponse.json({ client }, { status: 201 });
+    return NextResponse.json({ client, welcomeSms }, { status: 201 });
   } catch (e) {
     console.error("POST /api/leads/[id]/convert", e);
     if (e instanceof Prisma.PrismaClientKnownRequestError) {

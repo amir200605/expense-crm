@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     const { createClient } = await import("@/lib/services/client.service");
     const client = await createClient(agencyId, parsed.data, parsed.data.linkedLeadId);
 
-    await runClientWelcomeSmsAfterCreate({
+    const welcomeSms = await runClientWelcomeSmsAfterCreate({
       agencyId,
       appBaseUrl,
       client: {
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
       userEmail: user.email ?? null,
     });
 
-    return NextResponse.json(client, { status: 201 });
+    return NextResponse.json({ ...client, welcomeSms }, { status: 201 });
   } catch (e) {
     console.error("POST /api/clients", e);
     if (e instanceof Prisma.PrismaClientKnownRequestError) {
