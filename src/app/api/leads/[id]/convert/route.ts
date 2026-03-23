@@ -6,13 +6,14 @@ import { getLeadById } from "@/lib/services/lead.service";
 import { createClient } from "@/lib/services/client.service";
 import { runClientWelcomeSmsAfterCreate } from "@/lib/services/trigger-client-welcome-sms";
 import { prisma } from "@/lib/db";
+import { getPublicBaseUrlFromRequest } from "@/lib/public-app-url";
 import type { SessionUser } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: leadId } = await params;
   try {
-    const appBaseUrl = new URL(req.url).origin;
+    const appBaseUrl = getPublicBaseUrlFromRequest(req);
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const lead = await getLeadById(leadId);

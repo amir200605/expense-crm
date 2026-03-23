@@ -91,6 +91,7 @@ async function logWelcomeSmsOnLead(params: {
   to: string | null;
   body: string;
   sent: boolean;
+  mediaAttached?: boolean;
 }) {
   if (!params.logToLead?.leadId) return;
   await prisma.activityLog.create({
@@ -104,6 +105,7 @@ async function logWelcomeSmsOnLead(params: {
         message: params.body,
         sent: params.sent,
         source: "client_welcome",
+        mediaAttached: params.mediaAttached ?? false,
       },
     },
   });
@@ -142,6 +144,7 @@ export async function sendClientWelcomeSms(params: {
       to: phone || null,
       body: `Welcome SMS was not sent. ${explanation}`,
       sent: false,
+      mediaAttached: false,
     });
     return { sent: false, reason: "missing_telnyx_or_phone" };
   }
@@ -152,6 +155,7 @@ export async function sendClientWelcomeSms(params: {
       to: null,
       body: "Welcome SMS was not sent: this client has no phone number on file.",
       sent: false,
+      mediaAttached: false,
     });
     return { sent: false, reason: "missing_telnyx_or_phone" };
   }
@@ -163,6 +167,7 @@ export async function sendClientWelcomeSms(params: {
       to: phone,
       body: `Welcome SMS was not sent: phone number could not be converted to E.164 for Telnyx (error 40310). Stored value: ${JSON.stringify(phone)}. Use 10 digits (e.g. 5614515321) or E.164 (+15614515321). Remove letters and extra numbers.`,
       sent: false,
+      mediaAttached: false,
     });
     return { sent: false, reason: "missing_telnyx_or_phone" };
   }
@@ -262,6 +267,7 @@ export async function sendClientWelcomeSms(params: {
       to: e164To,
       body: `Welcome SMS was not sent: ${detail}`,
       sent: false,
+      mediaAttached: false,
     });
     return { sent: false, reason: "missing_telnyx_or_phone", detail };
   }
@@ -277,6 +283,7 @@ export async function sendClientWelcomeSms(params: {
       to: e164To,
       body: `Welcome SMS failed to send (Telnyx error): ${detail}`,
       sent: false,
+      mediaAttached: false,
     });
     return { sent: false, reason: "telnyx_api_error", detail };
   }
@@ -286,6 +293,7 @@ export async function sendClientWelcomeSms(params: {
     to: e164To,
     body: message,
     sent: true,
+    mediaAttached: mediaUrls.length > 0,
   });
 
   return { sent: true };

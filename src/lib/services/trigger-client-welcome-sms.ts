@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { writeAgentCardToPublicUrl } from "@/lib/agent-card-image";
+import { resolvePublicAppBaseUrl } from "@/lib/public-app-url";
 import { sendClientWelcomeSms, type SendClientWelcomeSmsResult } from "@/lib/services/client-welcome-sms";
 
 export type WelcomeSmsRunResult =
@@ -27,6 +28,8 @@ export async function runClientWelcomeSmsAfterCreate(params: {
   userEmail: string | null;
 }): Promise<WelcomeSmsRunResult> {
   try {
+    const appBaseUrl = resolvePublicAppBaseUrl(params.appBaseUrl ?? undefined);
+
     const latestPolicy = await prisma.policy.findFirst({
       where: { clientId: params.client.id },
       orderBy: { createdAt: "desc" },
@@ -73,7 +76,7 @@ export async function runClientWelcomeSmsAfterCreate(params: {
         ]);
         senderForCard = sender;
 
-        if (sender && params.appBaseUrl?.trim()) {
+        if (sender && appBaseUrl.trim()) {
           try {
             const generated = await writeAgentCardToPublicUrl({
               userId: params.userId,
@@ -84,7 +87,7 @@ export async function runClientWelcomeSmsAfterCreate(params: {
               npnNumber: sender.npnNumber,
               phone: sender.phone,
               avatarUrl: sender.avatarUrl,
-              appBaseUrl: params.appBaseUrl,
+              appBaseUrl,
             });
             if (generated) agentCardImageUrl = generated;
           } catch (genErr) {
@@ -102,8 +105,16 @@ export async function runClientWelcomeSmsAfterCreate(params: {
       const preferredImageUrl = rawCardUrl || rawAvatarUrl;
       agentCardImageUrl =
         preferredImageUrl && preferredImageUrl.startsWith("/")
-          ? (params.appBaseUrl ? `${params.appBaseUrl}${preferredImageUrl}` : null)
+          ? (appBaseUrl ? `${appBaseUrl}${preferredImageUrl}` : null)
           : preferredImageUrl || null;
+    }
+
+    if (!agentCardImageUrl && params.userId) {
+      const hint =
+        appBaseUrl.includes("localhost") || appBaseUrl.includes("127.0.0.1")
+          ? " Telnyx cannot fetch images from localhost — set PUBLIC_APP_URL to your public HTTPS URL (or use a tunnel)."
+          : "";
+      console.warn(`[welcome-sms] no agent card image URL for MMS (user ${params.userId}).${hint}`);
     }
 
     return await sendClientWelcomeSms({

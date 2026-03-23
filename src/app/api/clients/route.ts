@@ -7,6 +7,7 @@ import { listClientsQuerySchema } from "@/lib/validations/client";
 import type { SessionUser } from "@/lib/permissions";
 import { resolveAgencyIdForSession } from "@/lib/session-agency";
 import { runClientWelcomeSmsAfterCreate } from "@/lib/services/trigger-client-welcome-sms";
+import { getPublicBaseUrlFromRequest } from "@/lib/public-app-url";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const appBaseUrl = new URL(req.url).origin;
+    const appBaseUrl = getPublicBaseUrlFromRequest(req);
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as SessionUser;
