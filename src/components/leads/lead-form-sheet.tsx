@@ -284,6 +284,34 @@ export function LeadFormSheet({
   }
 
   type FieldCfg = { name: keyof CreateLeadInput; label: string; type?: "text" | "email" | "date" | "number" };
+  const fieldOptions: Partial<Record<keyof CreateLeadInput, string[]>> = {
+    gender: ["Male", "Female", "Other"],
+    maritalStatus: ["Single", "Married", "Divorced", "Widowed", "Separated"],
+    preferredContactMethod: ["Phone", "SMS", "Email"],
+    bestTimeToCall: ["Morning", "Afternoon", "Evening", "Anytime"],
+    leadType: ["Inbound", "Aged", "Live transfer", "Direct mail", "Referral", "Other"],
+    leadFreshness: ["Hot", "Warm", "Cold", "Aged"],
+    childrenYesNo: ["Yes", "No"],
+    grandchildrenYesNo: ["Yes", "No"],
+    existingLifeInsuranceYesNo: ["Yes", "No"],
+    wantsFuneralPlanningHelpYesNo: ["Yes", "No"],
+    knockoutConditionYesNo: ["Yes", "No"],
+    replacementInvolvedYesNo: ["Yes", "No"],
+    burialOrCremationPreference: ["Burial", "Cremation", "Undecided"],
+    preferredPaymentMode: ["Monthly", "Bank draft", "Direct Express", "Quarterly", "Annual"],
+    tobaccoStatus: ["Non-tobacco", "Tobacco", "Former"],
+    diabetes: ["Yes", "No"],
+    cancerHistory: ["Yes", "No"],
+    heartHistory: ["Yes", "No"],
+    copdOxygenUse: ["Yes", "No"],
+    strokeHistory: ["Yes", "No"],
+    kidneyDisease: ["Yes", "No"],
+    mobilityIssues: ["Yes", "No"],
+    mentalCapacityConcerns: ["Yes", "No"],
+    nursingHomeAssistedLivingStatus: ["Yes", "No"],
+    chargebackRisk: ["Low", "Medium", "High"],
+    applicationStatus: ["Draft", "Submitted", "Pending", "Approved", "Declined"],
+  };
   const clientInfoFields: FieldCfg[] = [
     { name: "firstName", label: "First name" },
     { name: "lastName", label: "Last name" },
@@ -398,13 +426,34 @@ export function LeadFormSheet({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>{cfg.label}</FormLabel>
-                <FormControl>
-                  <Input
-                    type={cfg.type ?? "text"}
-                    value={(field.value as string | number | undefined) ?? ""}
-                    onChange={(e) => field.onChange(e.target.value)}
-                  />
-                </FormControl>
+                {fieldOptions[cfg.name] ? (
+                  <Select
+                    value={(field.value as string | undefined) ?? "__none__"}
+                    onValueChange={(v) => field.onChange(v === "__none__" ? undefined : v)}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={`Select ${cfg.label.toLowerCase()}`} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none__">—</SelectItem>
+                      {fieldOptions[cfg.name]!.map((opt) => (
+                        <SelectItem key={`${cfg.name}-${opt}`} value={opt}>
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <FormControl>
+                    <Input
+                      type={cfg.type ?? "text"}
+                      value={(field.value as string | number | undefined) ?? ""}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  </FormControl>
+                )}
                 <FormMessage />
               </FormItem>
             )}
