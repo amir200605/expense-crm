@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/shared/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -22,6 +23,9 @@ interface AgencySettings {
   billingEmail: string | null;
   slug: string;
   integrations?: IntegrationsConfig;
+  templates?: {
+    welcomeSms?: string;
+  };
 }
 
 interface IntegrationsMeta {
@@ -82,7 +86,12 @@ async function changePassword(data: { currentPassword: string; newPassword: stri
   return body;
 }
 
-async function patchSettings(data: { name?: string; billingEmail?: string; integrations?: IntegrationsConfig }) {
+async function patchSettings(data: {
+  name?: string;
+  billingEmail?: string;
+  integrations?: IntegrationsConfig;
+  templates?: { welcomeSms?: string };
+}) {
   const res = await fetch("/api/settings", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -279,6 +288,8 @@ export default function SettingsPage() {
   const [testEmailResult, setTestEmailResult] = useState<{ ok: boolean; message?: string } | null>(null);
   const [testSmsTo, setTestSmsTo] = useState("");
   const [testSmsResult, setTestSmsResult] = useState<{ ok: boolean; message?: string } | null>(null);
+  const [welcomeSmsTemplate, setWelcomeSmsTemplate] = useState("");
+  const [templateSaved, setTemplateSaved] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["settings"],
@@ -295,6 +306,7 @@ export default function SettingsPage() {
       setOutlookFromEmail(int.outlook?.fromEmail ?? "");
       setOutlookSmtpUser(int.outlook?.smtpUser ?? "");
       setOutlookSmtpPass(int.outlook?.smtpPass ?? "");
+      setWelcomeSmsTemplate(data.agency.templates?.welcomeSms ?? "");
     }
   }, [data]);
 
@@ -313,6 +325,15 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       setIntegrationsSaved(true);
       setTimeout(() => setIntegrationsSaved(false), 3000);
+    },
+  });
+
+  const templateMutation = useMutation({
+    mutationFn: (welcomeSms: string) => patchSettings({ templates: { welcomeSms } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      setTemplateSaved(true);
+      setTimeout(() => setTemplateSaved(false), 3000);
     },
   });
 
@@ -381,6 +402,11 @@ export default function SettingsPage() {
         ? { fromEmail: outlookFromEmail || undefined, smtpUser: outlookSmtpUser || undefined, smtpPass: outlookSmtpPass || undefined }
         : undefined,
     });
+  }
+
+  function handleTemplateSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    templateMutation.mutate(welcomeSmsTemplate);
   }
 
   if (isAgent) {
@@ -651,6 +677,49 @@ export default function SettingsPage() {
               {canEdit && (
                 <Button type="submit" disabled={integrationsMutation.isPending}>
                   {integrationsMutation.isPending ? "Saving..." : "Save integrations"}
+                </Button>
+              )}
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && (
+        <Card className="border-border/80 shadow-soft max-w-2xl">
+          <CardHeader>
+            <CardTitle>Message templates</CardTitle>
+            <CardDescription>
+              Customize the SMS sent after a lead becomes a client. Use variables in double braces.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleTemplateSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="welcome-sms-template">Welcome SMS template</Label>
+                <Textarea
+                  id="welcome-sms-template"
+                  rows={12}
+                  value={welcomeSmsTemplate}
+                  onChange={(e) => setWelcomeSmsTemplate(e.target.value)}
+                  placeholder="Hi {{clientName}}, this is {{agentName}}..."
+                  disabled={!canEdit}
+                />
+              </div>
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+                <p className="font-medium text-foreground">Available variables</p>
+                <p>
+                  {`{{clientName}}, {{agentName}}, {{carrierName}}, {{policyNumber}}, {{coverageAmount}}, {{monthlyPremium}}, {{draftDate}}, {{carrierServiceNumber}}, {{officeNumber}}`}
+                </p>
+              </div>
+              {templateMutation.isError && (
+                <p className="text-sm text-destructive">{templateMutation.error.message}</p>
+              )}
+              {templateSaved && (
+                <p className="text-sm font-medium text-green-600">Template saved</p>
+              )}
+              {canEdit && (
+                <Button type="submit" disabled={templateMutation.isPending}>
+                  {templateMutation.isPending ? "Saving..." : "Save template"}
                 </Button>
               )}
             </form>

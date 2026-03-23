@@ -35,6 +35,10 @@ function maskIntegrations(raw: Record<string, Record<string, string>> | undefine
   };
 }
 
+type TemplatesConfig = {
+  welcomeSms?: string;
+};
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -56,6 +60,7 @@ export async function GET() {
 
   const settings = (agency.settings as Record<string, unknown>) ?? {};
   const integrations = maskIntegrations(settings.integrations as Record<string, Record<string, string>>);
+  const templates = (settings.templates as TemplatesConfig) ?? {};
   const rawTelnyx = (settings.integrations as Record<string, Record<string, string>> | undefined)?.telnyx;
   const fromSaved = Boolean(resolveTelnyxFromNumber(rawTelnyx?.fromNumber));
 
@@ -66,6 +71,7 @@ export async function GET() {
       billingEmail: agency.billingEmail,
       slug: agency.slug,
       integrations,
+      templates,
     },
     integrationsMeta: {
       telnyxApiKeyConfigured: Boolean(getTelnyxApiKey()),
@@ -126,6 +132,27 @@ export async function PATCH(req: Request) {
     };
     data.settings = { ...current, integrations: merged };
   }
+  if (body.templates !== undefined && typeof body.templates === "object") {
+    const agencyRow = await prisma.agency.findUnique({
+      where: { id: agencyId },
+      select: { settings: true },
+    });
+    const current = (agencyRow?.settings as Record<string, unknown>) ?? {};
+    const curTemplates = (current.templates as TemplatesConfig | undefined) ?? {};
+    const newTemplates = body.templates as TemplatesConfig;
+    data.settings = {
+      ...current,
+      templates: {
+        ...curTemplates,
+        ...(typeof newTemplates.welcomeSms === "string"
+          ? { welcomeSms: newTemplates.welcomeSms }
+          : {}),
+      },
+      ...(data.settings && typeof data.settings === "object"
+        ? (data.settings as Record<string, unknown>)
+        : {}),
+    };
+  }
 
   const agency = await prisma.agency.update({
     where: { id: agencyId },
@@ -135,6 +162,7 @@ export async function PATCH(req: Request) {
 
   const settings = (agency.settings as Record<string, unknown>) ?? {};
   const integrations = maskIntegrations(settings.integrations as Record<string, Record<string, string>>);
+  const templates = (settings.templates as TemplatesConfig) ?? {};
   const rawTelnyxPatch = (settings.integrations as Record<string, Record<string, string>> | undefined)?.telnyx;
   const fromSavedPatch = Boolean(resolveTelnyxFromNumber(rawTelnyxPatch?.fromNumber));
 
@@ -145,6 +173,7 @@ export async function PATCH(req: Request) {
       billingEmail: agency.billingEmail,
       slug: agency.slug,
       integrations,
+      templates,
     },
     integrationsMeta: {
       telnyxApiKeyConfigured: Boolean(getTelnyxApiKey()),

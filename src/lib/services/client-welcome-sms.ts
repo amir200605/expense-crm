@@ -53,6 +53,30 @@ function getCarrierServiceNumber(carrier: string | null | undefined): string {
   return `Carrier customer service number: ${match?.[1] ?? "N/A"}`;
 }
 
+const DEFAULT_OFFICE_NUMBER = "877-864-9126";
+const DEFAULT_WELCOME_SMS_TEMPLATE = `Hey {{clientName}}, this is {{agentName}}, your life insurance agent. If you have any questions about your policy with {{carrierName}}, feel free to call or text me here anytime. My office number is {{officeNumber}}.
+
+Here are your policy details for reference:
+
+Policy Number: {{policyNumber}}
+
+Coverage Amount: {{coverageAmount}}
+
+Monthly Premium: ${{monthlyPremium}}
+
+Payment Method: Direct Express card
+
+Draft Date: {{draftDate}}
+
+For customer service, you can also contact TransAmerica at 877-234-4848.
+
+You've taken an important step toward ensuring your family is protected and prepared for any final expenses. If you have any questions or need anything at all, please don't hesitate to reach out-I'm here to help anytime!
+{{carrierServiceNumber}}`;
+
+function renderTemplate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key) => vars[key] ?? "");
+}
+
 async function logWelcomeSmsOnLead(params: {
   logToLead?: { leadId: string; userId: string | null };
   to: string | null;
@@ -142,24 +166,18 @@ export async function sendClientWelcomeSms(params: {
     ? new Date(params.policy.paymentDraftDate).toLocaleDateString("en-US")
     : "N/A";
 
-  const message = `Hey ${clientName}, this is ${params.agentName}, your life insurance agent. If you have any questions about your policy with ${carrierName}, feel free to call or text me here anytime. My office number is 877-864-9126.
-
-Here are your policy details for reference:
-
-Policy Number: ${policyNumber}
-
-Coverage Amount: ${coverageAmount}
-
-Monthly Premium: $${monthlyPremium}
-
-Payment Method: Direct Express card
-
-Draft Date: ${draftDate}
-
-For customer service, you can also contact TransAmerica at 877-234-4848.
-
-You've taken an important step toward ensuring your family is protected and prepared for any final expenses. If you have any questions or need anything at all, please don't hesitate to reach out-I'm here to help anytime!
-${getCarrierServiceNumber(carrierName)}`;
+  const template = (settings.templates as { welcomeSms?: string } | undefined)?.welcomeSms?.trim() || DEFAULT_WELCOME_SMS_TEMPLATE;
+  const message = renderTemplate(template, {
+    clientName,
+    agentName: params.agentName,
+    carrierName,
+    policyNumber,
+    coverageAmount,
+    monthlyPremium,
+    draftDate,
+    carrierServiceNumber: getCarrierServiceNumber(carrierName),
+    officeNumber: DEFAULT_OFFICE_NUMBER,
+  });
 
   const telnyx = new Telnyx({ apiKey });
   let sendParams: ReturnType<typeof buildTelnyxSendParams>;

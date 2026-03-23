@@ -36,15 +36,28 @@ export function ClientDetailClient({
     city: string | null;
     state: string | null;
     zip: string | null;
+    address1?: string | null;
+    address2?: string | null;
+    dateOfBirth?: string | null;
     beneficiaryName: string | null;
+    beneficiaryRelation?: string | null;
+    existingCoverage?: string | null;
+    replacementWarning?: boolean;
     carrier: string | null;
     productName: string | null;
     faceAmount: unknown;
     premiumAmount: unknown;
     policyStatus: string | null;
+    underwritingStatus?: string | null;
+    policyEffectiveDate?: string | null;
+    paymentMode?: string | null;
+    agentOfRecordId?: string | null;
     chargebackRisk: boolean;
     notes: string | null;
+    householdNotes?: string | null;
     linkedLeadId: string | null;
+    createdAt?: string;
+    updatedAt?: string;
     policies: unknown[];
   };
 }) {
@@ -97,6 +110,9 @@ export function ClientDetailClient({
   }
 
   const name = client ? `${client.firstName} ${client.lastName}` : "";
+  const fmtDate = (v: unknown) => (v ? formatDate(String(v)) : "—");
+  const fmtMoney = (v: unknown) => (v != null ? formatCurrency(Number(v)) : "—");
+  const fmtBool = (v: unknown) => (typeof v === "boolean" ? (v ? "Yes" : "No") : "—");
 
   return (
     <div className="space-y-6">
@@ -174,13 +190,37 @@ export function ClientDetailClient({
           <Card className="border-border/80 shadow-soft">
             <CardHeader><CardTitle className="text-base">Summary</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Address</p><p className="text-sm">{[client?.city, client?.state, client?.zip].filter(Boolean).join(", ") || "—"}</p></div>
-              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Beneficiary</p><p className="text-sm">{client?.beneficiaryName ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">First name</p><p className="text-sm">{client?.firstName ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Last name</p><p className="text-sm">{client?.lastName ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Phone</p><p className="text-sm font-mono">{client?.phone ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</p><p className="text-sm">{client?.email ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Date of birth</p><p className="text-sm">{fmtDate(client?.dateOfBirth)}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Address line 1</p><p className="text-sm">{client?.address1 ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Address line 2</p><p className="text-sm">{client?.address2 ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">City / State / ZIP</p><p className="text-sm">{[client?.city, client?.state, client?.zip].filter(Boolean).join(", ") || "—"}</p></div>
+
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Beneficiary name</p><p className="text-sm">{client?.beneficiaryName ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Beneficiary relation</p><p className="text-sm">{client?.beneficiaryRelation ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Existing coverage</p><p className="text-sm">{client?.existingCoverage ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Replacement involved</p><p className="text-sm">{fmtBool(client?.replacementWarning)}</p></div>
+
               <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Carrier</p><p className="text-sm">{client?.carrier ?? "—"}</p></div>
               <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Product</p><p className="text-sm">{client?.productName ?? "—"}</p></div>
-              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Face amount</p><p className="text-sm">{client?.faceAmount != null ? formatCurrency(Number(client.faceAmount)) : "—"}</p></div>
-              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Premium</p><p className="text-sm">{client?.premiumAmount != null ? formatCurrency(Number(client.premiumAmount)) : "—"}</p></div>
-              {client?.notes && <div className="sm:col-span-2"><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Notes</p><p className="mt-1 whitespace-pre-wrap text-sm">{client.notes}</p></div>}
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Face amount</p><p className="text-sm">{fmtMoney(client?.faceAmount)}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Premium amount</p><p className="text-sm">{fmtMoney(client?.premiumAmount)}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Policy status</p><p className="text-sm">{client?.policyStatus ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Underwriting status</p><p className="text-sm">{client?.underwritingStatus ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Policy effective date</p><p className="text-sm">{fmtDate(client?.policyEffectiveDate)}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Payment mode</p><p className="text-sm">{client?.paymentMode ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Agent of record</p><p className="text-sm">{client?.agentOfRecordId ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Chargeback risk</p><p className="text-sm">{fmtBool(client?.chargebackRisk)}</p></div>
+
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Linked lead</p><p className="text-sm">{client?.linkedLeadId ?? "—"}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Created</p><p className="text-sm">{fmtDate(client?.createdAt)}</p></div>
+              <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Updated</p><p className="text-sm">{fmtDate(client?.updatedAt)}</p></div>
+
+              <div className="sm:col-span-2"><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Notes</p><p className="mt-1 whitespace-pre-wrap text-sm">{client?.notes ?? "—"}</p></div>
+              <div className="sm:col-span-2"><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Household notes</p><p className="mt-1 whitespace-pre-wrap text-sm">{client?.householdNotes ?? "—"}</p></div>
             </CardContent>
           </Card>
         </TabsContent>
