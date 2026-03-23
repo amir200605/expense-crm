@@ -22,10 +22,39 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         { status: 403 }
       );
     }
-    if (lead.client) {
-      return NextResponse.json({ client: lead.client }, { status: 200 });
-    }
     const user = session.user as SessionUser;
+    if (lead.client) {
+      const existingClient = await prisma.client.findUnique({
+        where: { id: lead.client.id },
+        select: {
+          id: true,
+          agencyId: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          carrier: true,
+          premiumAmount: true,
+        },
+      });
+      if (existingClient) {
+        await runClientWelcomeSmsAfterCreate({
+          agencyId: existingClient.agencyId,
+          client: {
+            id: existingClient.id,
+            firstName: existingClient.firstName,
+            lastName: existingClient.lastName,
+            phone: existingClient.phone,
+            carrier: existingClient.carrier,
+            premiumAmount: existingClient.premiumAmount,
+          },
+          linkedLeadId: leadId,
+          userId: user.id,
+          userName: user.name ?? null,
+          userEmail: user.email ?? null,
+        });
+      }
+      return NextResponse.json({ client: lead.client, resentWelcome: true }, { status: 200 });
+    }
     const client = await createClient(lead.agencyId, {
       firstName: lead.firstName,
       lastName: lead.lastName,
