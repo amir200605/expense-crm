@@ -217,7 +217,8 @@ export function LeadFormSheet({
     mutation.mutate(toCreateLeadPayload(values));
   }
 
-  const textFields: Array<{ name: keyof CreateLeadInput; label: string; type?: "text" | "email" | "date" | "number" }> = [
+  type FieldCfg = { name: keyof CreateLeadInput; label: string; type?: "text" | "email" | "date" | "number" };
+  const clientInfoFields: FieldCfg[] = [
     { name: "firstName", label: "First name" },
     { name: "lastName", label: "Last name" },
     { name: "fullName", label: "Full name" },
@@ -236,6 +237,8 @@ export function LeadFormSheet({
     { name: "timeZone", label: "Time zone" },
     { name: "preferredContactMethod", label: "Preferred contact method" },
     { name: "bestTimeToCall", label: "Best time to call" },
+  ];
+  const leadSourceFields: FieldCfg[] = [
     { name: "source", label: "Lead source" },
     { name: "vendor", label: "Lead vendor" },
     { name: "campaign", label: "Campaign name" },
@@ -243,6 +246,8 @@ export function LeadFormSheet({
     { name: "dateLeadReceived", label: "Date lead received", type: "date" },
     { name: "leadType", label: "Lead type" },
     { name: "leadFreshness", label: "Lead freshness" },
+  ];
+  const personalFamilyFields: FieldCfg[] = [
     { name: "spouseName", label: "Spouse name" },
     { name: "beneficiaryName", label: "Beneficiary name" },
     { name: "beneficiaryRelation", label: "Beneficiary relationship" },
@@ -250,6 +255,8 @@ export function LeadFormSheet({
     { name: "emergencyContact", label: "Emergency contact" },
     { name: "childrenYesNo", label: "Children yes/no" },
     { name: "grandchildrenYesNo", label: "Grandchildren yes/no" },
+  ];
+  const finalExpenseNeedsFields: FieldCfg[] = [
     { name: "coverageAmountInterest", label: "Coverage amount wanted", type: "number" },
     { name: "budgetMonthlyPremiumTarget", label: "Budget/monthly premium target" },
     { name: "burialOrCremationPreference", label: "Burial or cremation preference" },
@@ -257,6 +264,8 @@ export function LeadFormSheet({
     { name: "existingPolicyAmount", label: "Existing policy amount" },
     { name: "wantsFuneralPlanningHelpYesNo", label: "Wants funeral planning help yes/no" },
     { name: "preferredPaymentMode", label: "Preferred payment mode" },
+  ];
+  const healthUnderwritingFields: FieldCfg[] = [
     { name: "height", label: "Height" },
     { name: "weight", label: "Weight" },
     { name: "tobaccoStatus", label: "Tobacco status" },
@@ -272,15 +281,19 @@ export function LeadFormSheet({
     { name: "nursingHomeAssistedLivingStatus", label: "Nursing home / assisted living status" },
     { name: "underwritingClassEstimatedEligibility", label: "Underwriting class / estimated eligibility" },
     { name: "knockoutConditionYesNo", label: "Knockout condition yes/no" },
+  ];
+  const financialPaymentFields: FieldCfg[] = [
     { name: "bankName", label: "Bank name" },
     { name: "routingNumber", label: "Routing number" },
     { name: "accountNumber", label: "Account number" },
     { name: "socialSecurityOrLast4", label: "Social Security number or last 4" },
-    { name: "draftDate", label: "Draft date" },
+    { name: "draftDate", label: "Draft date", type: "date" },
     { name: "incomeSource", label: "Income source" },
     { name: "beneficiaryPayorIfDifferent", label: "Beneficiary payor if different" },
     { name: "paymentMethod", label: "Payment method" },
     { name: "replacementInvolvedYesNo", label: "Replacement involved yes/no" },
+  ];
+  const policyApplicationFields: FieldCfg[] = [
     { name: "carrierQuoted", label: "Carrier quoted" },
     { name: "planProduct", label: "Plan/product" },
     { name: "faceAmount", label: "Face amount" },
@@ -296,6 +309,33 @@ export function LeadFormSheet({
     { name: "chargebackRisk", label: "Chargeback risk" },
   ];
 
+  function renderTextGrid(fields: FieldCfg[]) {
+    return (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {fields.map((cfg) => (
+          <FormField
+            key={cfg.name}
+            control={form.control}
+            name={cfg.name}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{cfg.label}</FormLabel>
+                <FormControl>
+                  <Input
+                    type={cfg.type ?? "text"}
+                    value={(field.value as string | number | undefined) ?? ""}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-lg">
@@ -303,181 +343,198 @@ export function LeadFormSheet({
           <SheetTitle>Add lead</SheetTitle>
         </SheetHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {textFields.map((cfg) => (
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 py-4">
+            <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-4">
+              <h3 className="text-sm font-semibold">1. Client information</h3>
+              {renderTextGrid(clientInfoFields)}
+            </div>
+
+            <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-4">
+              <h3 className="text-sm font-semibold">2. Lead source fields</h3>
+              {renderTextGrid(leadSourceFields)}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <FormField
-                  key={cfg.name}
                   control={form.control}
-                  name={cfg.name}
+                  name="assignedAgentId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{cfg.label}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type={cfg.type ?? "text"}
-                          value={(field.value as string | number | undefined) ?? ""}
-                          onChange={(e) => field.onChange(e.target.value)}
-                        />
-                      </FormControl>
+                      <FormLabel>Assigned agent</FormLabel>
+                      <Select
+                        value={field.value ?? "unassigned"}
+                        onValueChange={(v) => field.onChange(v === "unassigned" ? undefined : v)}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select an agent" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {agents.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.name ?? a.username ?? a.id}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              ))}
+                <FormField
+                  control={form.control}
+                  name="disposition"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Disposition status</FormLabel>
+                      <Select value={field.value ?? "NEW"} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select disposition" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="NEW">NEW</SelectItem>
+                          <SelectItem value="ATTEMPTING_CONTACT">ATTEMPTING CONTACT</SelectItem>
+                          <SelectItem value="CONTACTED">CONTACTED</SelectItem>
+                          <SelectItem value="INTERESTED">INTERESTED</SelectItem>
+                          <SelectItem value="APPOINTMENT_SET">APPOINTMENT SET</SelectItem>
+                          <SelectItem value="PRESENTED">PRESENTED</SelectItem>
+                          <SelectItem value="APPLICATION_SENT">APPLICATION SENT</SelectItem>
+                          <SelectItem value="SOLD">SOLD</SelectItem>
+                          <SelectItem value="NOT_INTERESTED">NOT INTERESTED</SelectItem>
+                          <SelectItem value="BAD_LEAD">BAD LEAD</SelectItem>
+                          <SelectItem value="DNC">DNC</SelectItem>
+                          <SelectItem value="RECYCLE">RECYCLE</SelectItem>
+                          <SelectItem value="FOLLOW_UP_LATER">FOLLOW UP LATER</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
-            <FormField
-              control={form.control}
-              name="disposition"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Disposition status</FormLabel>
-                  <Select value={field.value ?? "NEW"} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select disposition" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="NEW">NEW</SelectItem>
-                      <SelectItem value="ATTEMPTING_CONTACT">ATTEMPTING CONTACT</SelectItem>
-                      <SelectItem value="CONTACTED">CONTACTED</SelectItem>
-                      <SelectItem value="INTERESTED">INTERESTED</SelectItem>
-                      <SelectItem value="APPOINTMENT_SET">APPOINTMENT SET</SelectItem>
-                      <SelectItem value="PRESENTED">PRESENTED</SelectItem>
-                      <SelectItem value="APPLICATION_SENT">APPLICATION SENT</SelectItem>
-                      <SelectItem value="SOLD">SOLD</SelectItem>
-                      <SelectItem value="NOT_INTERESTED">NOT INTERESTED</SelectItem>
-                      <SelectItem value="BAD_LEAD">BAD LEAD</SelectItem>
-                      <SelectItem value="DNC">DNC</SelectItem>
-                      <SelectItem value="RECYCLE">RECYCLE</SelectItem>
-                      <SelectItem value="FOLLOW_UP_LATER">FOLLOW UP LATER</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="assignedAgentId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assigned agent</FormLabel>
-                  <Select
-                    value={field.value ?? "unassigned"}
-                    onValueChange={(v) => field.onChange(v === "unassigned" ? undefined : v)}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an agent" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {agents.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.name ?? a.username ?? a.id}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
-            <FormField
-              control={form.control}
-              name="decisionMakerNotes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Decision maker notes</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} value={field.value ?? ""} rows={3} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="concernReasonForBuying"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Concern/reason for buying</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} value={field.value ?? ""} rows={3} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="prescriptionMedications"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Prescription medications</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} value={field.value ?? ""} rows={3} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="majorConditions"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Major conditions</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} value={field.value ?? ""} rows={3} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="recentSurgeries"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Recent surgeries</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} value={field.value ?? ""} rows={3} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="persistencyNotes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Persistency notes</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} value={field.value ?? ""} rows={3} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} value={field.value ?? ""} rows={3} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-4">
+              <h3 className="text-sm font-semibold">4. Personal/family fields</h3>
+              {renderTextGrid(personalFamilyFields)}
+              <FormField
+                control={form.control}
+                name="decisionMakerNotes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Decision maker notes</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} value={field.value ?? ""} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-4">
+              <h3 className="text-sm font-semibold">5. Final expense needs fields</h3>
+              {renderTextGrid(finalExpenseNeedsFields)}
+              <FormField
+                control={form.control}
+                name="concernReasonForBuying"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Concern/reason for buying</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} value={field.value ?? ""} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-4">
+              <h3 className="text-sm font-semibold">6. Health underwriting fields</h3>
+              {renderTextGrid(healthUnderwritingFields)}
+              <FormField
+                control={form.control}
+                name="prescriptionMedications"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Prescription medications</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} value={field.value ?? ""} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="majorConditions"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Major conditions</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} value={field.value ?? ""} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="recentSurgeries"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Recent surgeries</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} value={field.value ?? ""} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-4">
+              <h3 className="text-sm font-semibold">7. Financial/payment fields</h3>
+              {renderTextGrid(financialPaymentFields)}
+            </div>
+
+            <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-4">
+              <h3 className="text-sm font-semibold">8. Policy/application fields</h3>
+              {renderTextGrid(policyApplicationFields)}
+              <FormField
+                control={form.control}
+                name="persistencyNotes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Persistency notes</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} value={field.value ?? ""} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-4">
+              <h3 className="text-sm font-semibold">General notes</h3>
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} value={field.value ?? ""} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             {mutation.isError && (
               <p className="text-sm text-destructive">{mutation.error.message}</p>
             )}
