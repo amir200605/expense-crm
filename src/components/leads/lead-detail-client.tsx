@@ -524,18 +524,6 @@ export function LeadDetailClient({
                           {m.message}
                         </pre>
                       )}
-                      {m.mediaAttached && (
-                        <div className="mt-3">
-                          <p className="mb-1 text-xs font-medium text-muted-foreground">Attached agent card:</p>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={`/api/team/me/card-preview?t=${m.id}`}
-                            alt="Agent card"
-                            className="rounded-lg border border-border/60 shadow-sm"
-                            style={{ maxWidth: 320, height: "auto" }}
-                          />
-                        </div>
-                      )}
                     </li>
                   ))}
                 </ul>
