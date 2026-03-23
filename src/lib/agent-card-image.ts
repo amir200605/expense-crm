@@ -2,9 +2,9 @@ import path from "path";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import sharp from "sharp";
 
-const CARD_W = 640;
-const CARD_H = 360;
-const HEADER_H = 56;
+const CARD_W = 550;
+const CARD_H = 314;
+const HEADER_H = 44;
 const HEADER_FILL = "#1d3557";
 const BODY_FILL = "#ffffff";
 const TEXT_MUTED = "#475569";
@@ -80,21 +80,27 @@ export async function buildAgentCardPngBuffer(opts: {
   const displayPhone = escapeXml(formatPhoneDisplay(opts.phone));
   const licensedSubtitle = "LICENSED LIFE &amp; HEALTH INSURANCE AGENT";
 
-  const avatarCx = 90;
-  const avatarCy = HEADER_H + (CARD_H - HEADER_H) / 2;
-  const avatarR = 50;
+  const bodyH = CARD_H - HEADER_H;
+  const bodyCy = HEADER_H + bodyH / 2;
 
-  const textLeft = avatarCx + avatarR + 24;
-  const textWidth = CARD_W - textLeft - 24;
+  const avatarCx = 80;
+  const avatarCy = bodyCy;
+  const avatarR = 42;
 
-  const nameFs = fitFontSize(nameRaw.length, textWidth, 22, 14);
-  const subtitleFs = 10;
-  const detailFs = 13;
+  const textLeft = avatarCx + avatarR + 20;
+  const textWidth = CARD_W - textLeft - 20;
 
-  const yName = HEADER_H + 52;
-  const ySubtitle = yName + nameFs + 8;
-  const yNpn = ySubtitle + subtitleFs + 18;
-  const yPhone = yNpn + detailFs + 10;
+  const nameFs = fitFontSize(nameRaw.length, textWidth, 20, 12);
+  const subtitleFs = 9;
+  const detailFs = 12;
+
+  const blockH = nameFs + 6 + subtitleFs + 14 + detailFs + 8 + detailFs;
+  const blockTop = bodyCy - blockH / 2;
+
+  const yName = blockTop + nameFs;
+  const ySubtitle = yName + 6 + subtitleFs;
+  const yNpn = ySubtitle + 14 + detailFs;
+  const yPhone = yNpn + 8 + detailFs;
 
   const headerCx = CARD_W / 2;
 
@@ -113,27 +119,28 @@ export async function buildAgentCardPngBuffer(opts: {
     : `
   <circle cx="${avatarCx}" cy="${avatarCy}" r="${avatarR + 2}" fill="${BORDER_COLOR}"/>
   <circle cx="${avatarCx}" cy="${avatarCy}" r="${avatarR}" fill="#f0fdfa"/>
-  <text x="${avatarCx}" y="${avatarCy + 12}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="600" fill="${TEXT_NAME}">${escapeXml(letter)}</text>
+  <text x="${avatarCx}" y="${avatarCy + 10}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="600" fill="${TEXT_NAME}">${escapeXml(letter)}</text>
 `;
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${CARD_W}" height="${CARD_H}" xmlns="http://www.w3.org/2000/svg">
-  <rect x="0" y="0" width="${CARD_W}" height="${CARD_H}" rx="12" fill="${BODY_FILL}" stroke="${BORDER_COLOR}" stroke-width="2"/>
-  <rect x="0" y="0" width="${CARD_W}" height="${HEADER_H}" rx="12" fill="${HEADER_FILL}"/>
-  <rect x="0" y="${HEADER_H - 12}" width="${CARD_W}" height="12" fill="${HEADER_FILL}"/>
-  <g transform="translate(20,10)">
-    <path d="M22 2 C15 7, 9 7, 2 9 V20 C2 30, 10 38, 22 44 C34 38, 42 30, 42 20 V9 C35 7, 29 7, 22 2 Z" fill="#d8e2f1" stroke="#7b9cc2" stroke-width="1.5"/>
-    <path d="M22 8 C17 11, 12 11, 8 13 V20 C8 27, 13 33, 22 38 C31 33, 36 27, 36 20 V13 C32 11, 27 11, 22 8 Z" fill="#2a5a8a"/>
-    <line x1="22" y1="13" x2="22" y2="32" stroke="#d8e2f1" stroke-width="1.8"/>
-    <line x1="12" y1="19" x2="32" y2="19" stroke="#d8e2f1" stroke-width="1.8"/>
-    <circle cx="17" cy="26" r="2" fill="#d8e2f1"/>
-    <circle cx="27" cy="26" r="2" fill="#d8e2f1"/>
+  <rect x="0" y="0" width="${CARD_W}" height="${CARD_H}" rx="10" fill="${BODY_FILL}" stroke="${BORDER_COLOR}" stroke-width="1.5"/>
+  <rect x="0" y="0" width="${CARD_W}" height="${HEADER_H}" rx="10" fill="${HEADER_FILL}"/>
+  <rect x="0" y="${HEADER_H - 10}" width="${CARD_W}" height="10" fill="${HEADER_FILL}"/>
+  <g transform="translate(14,6)">
+    <path d="M16 1 C11 5, 7 5, 1 7 V15 C1 22, 7 27, 16 32 C25 27, 31 22, 31 15 V7 C25 5, 21 5, 16 1 Z" fill="#d8e2f1" stroke="#7b9cc2" stroke-width="1.2"/>
+    <path d="M16 5 C12 8, 9 8, 5 9 V15 C5 20, 9 25, 16 28 C23 25, 27 20, 27 15 V9 C23 8, 20 8, 16 5 Z" fill="#2a5a8a"/>
+    <line x1="16" y1="9" x2="16" y2="24" stroke="#d8e2f1" stroke-width="1.4"/>
+    <line x1="9" y1="14" x2="23" y2="14" stroke="#d8e2f1" stroke-width="1.4"/>
+    <circle cx="12" cy="19" r="1.5" fill="#d8e2f1"/>
+    <circle cx="20" cy="19" r="1.5" fill="#d8e2f1"/>
   </g>
-  <text x="${headerCx}" y="${HEADER_H / 2 + 6}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="0.12em" fill="#ffffff">${escapeXml(headerText)}</text>
+  <text x="${headerCx}" y="${HEADER_H / 2 + 5}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" letter-spacing="0.12em" fill="#ffffff">${escapeXml(headerText)}</text>
+  <line x1="0" y1="${HEADER_H}" x2="${CARD_W}" y2="${HEADER_H}" stroke="${BORDER_COLOR}" stroke-width="0.5"/>
   ${avatarBlock}
-  <text x="${textLeft}" y="${yName}" font-family="Arial, Helvetica, sans-serif" font-size="${nameFs}" font-weight="700" fill="${TEXT_NAME}" letter-spacing="0.03em">${displayName}</text>
-  <text x="${textLeft}" y="${ySubtitle}" font-family="Arial, Helvetica, sans-serif" font-size="${subtitleFs}" font-weight="600" fill="${TEXT_MUTED}" letter-spacing="0.04em">${licensedSubtitle}</text>
-  <line x1="${textLeft}" y1="${ySubtitle + 8}" x2="${textLeft + 180}" y2="${ySubtitle + 8}" stroke="${BORDER_COLOR}" stroke-width="1"/>
+  <text x="${textLeft}" y="${yName}" font-family="Arial, Helvetica, sans-serif" font-size="${nameFs}" font-weight="700" fill="${TEXT_NAME}" letter-spacing="0.02em">${displayName}</text>
+  <text x="${textLeft}" y="${ySubtitle}" font-family="Arial, Helvetica, sans-serif" font-size="${subtitleFs}" font-weight="600" fill="${TEXT_MUTED}" letter-spacing="0.03em">${licensedSubtitle}</text>
+  <line x1="${textLeft}" y1="${ySubtitle + 6}" x2="${textLeft + 160}" y2="${ySubtitle + 6}" stroke="${BORDER_COLOR}" stroke-width="0.8"/>
   <text x="${textLeft}" y="${yNpn}" font-family="Arial, Helvetica, sans-serif" font-size="${detailFs}" fill="${TEXT_MUTED}"><tspan font-weight="600">NPN:</tspan> ${displayNpn}</text>
   <text x="${textLeft}" y="${yPhone}" font-family="Arial, Helvetica, sans-serif" font-size="${detailFs}" fill="${TEXT_MUTED}"><tspan font-weight="600">Phone:</tspan> ${displayPhone}</text>
 </svg>`;
