@@ -414,48 +414,38 @@ export default function SettingsPage() {
   const variableGroups: Array<{ id: string; title: string; items: readonly string[] }> = [
     {
       id: "1",
-      title: "1. Core client/policy variables",
-      items: ["clientName", "agentName", "carrierName", "policyNumber", "coverageAmount", "monthlyPremium", "draftDate", "carrierServiceNumber", "officeNumber"],
+      title: "1. Client information",
+      items: ["firstName", "lastName", "fullName", "phone", "phone2", "email", "dateOfBirth", "age", "gender", "maritalStatus", "address", "city", "state", "zip", "county", "timeZone", "preferredContactMethod", "bestTimeToCall"],
     },
     {
       id: "2",
-      title: "2. Lead core variables",
-      items: ["leadFirstName", "leadLastName", "leadFullName", "leadPhone", "leadEmail", "leadCity", "leadState", "leadZip", "leadDisposition", "leadPipelineStage", "leadSource"],
-    },
-    {
-      id: "3",
-      title: "3. Client information fields",
-      items: ["fullName", "phone", "phone2", "dateOfBirth", "age", "gender", "maritalStatus", "address", "city", "state", "zip", "county", "timeZone", "preferredContactMethod", "bestTimeToCall"],
+      title: "2. Lead source fields",
+      items: ["source", "vendor", "campaign", "leadCost", "dateLeadReceived", "leadType", "leadFreshness", "assignedAgentId", "disposition"],
     },
     {
       id: "4",
-      title: "4. Lead source fields",
-      items: ["vendor", "campaign", "leadCost", "dateLeadReceived", "leadType", "leadFreshness"],
-    },
-    {
-      id: "5",
-      title: "5. Personal/family fields",
+      title: "4. Personal/family fields",
       items: ["spouseName", "beneficiaryName", "beneficiaryRelation", "beneficiaryPhone", "emergencyContact", "childrenYesNo", "grandchildrenYesNo", "decisionMakerNotes"],
     },
     {
-      id: "6",
-      title: "6. Final expense needs fields",
+      id: "5",
+      title: "5. Final expense needs fields",
       items: ["coverageAmountInterest", "budgetMonthlyPremiumTarget", "burialOrCremationPreference", "existingLifeInsuranceYesNo", "existingPolicyAmount", "concernReasonForBuying", "wantsFuneralPlanningHelpYesNo", "preferredPaymentMode"],
     },
     {
-      id: "7",
-      title: "7. Health underwriting fields",
+      id: "6",
+      title: "6. Health underwriting fields",
       items: ["height", "weight", "tobaccoStatus", "prescriptionMedications", "majorConditions", "hospitalizationsLast2Years", "cancerHistory", "heartHistory", "diabetes", "copdOxygenUse", "strokeHistory", "kidneyDisease", "mobilityIssues", "mentalCapacityConcerns", "nursingHomeAssistedLivingStatus", "recentSurgeries", "underwritingClassEstimatedEligibility", "knockoutConditionYesNo"],
     },
     {
-      id: "8",
-      title: "8. Financial/payment fields",
-      items: ["bankName", "routingNumber", "accountNumber", "socialSecurityOrLast4", "incomeSource", "beneficiaryPayorIfDifferent", "paymentMethod", "replacementInvolvedYesNo"],
+      id: "7",
+      title: "7. Financial/payment fields",
+      items: ["bankName", "routingNumber", "accountNumber", "socialSecurityOrLast4", "draftDate", "incomeSource", "beneficiaryPayorIfDifferent", "paymentMethod", "replacementInvolvedYesNo"],
     },
     {
-      id: "9",
-      title: "9. Policy/application fields",
-      items: ["carrierQuoted", "planProduct", "faceAmount", "premium", "applicationDate", "applicationStatus", "writingAgent", "splitAgent", "effectiveDate", "approvalDate", "declineReason", "chargebackRisk", "persistencyNotes", "notes"],
+      id: "8",
+      title: "8. Policy/application fields",
+      items: ["carrierQuoted", "planProduct", "faceAmount", "premium", "applicationDate", "applicationStatus", "policyNumber", "writingAgent", "splitAgent", "effectiveDate", "approvalDate", "declineReason", "chargebackRisk", "persistencyNotes", "notes"],
     },
   ];
 

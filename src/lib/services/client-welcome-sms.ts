@@ -167,7 +167,6 @@ export async function sendClientWelcomeSms(params: {
   }
 
   const clientName = `${params.client.firstName} ${params.client.lastName}`.trim();
-  const carrierName = params.policy?.carrier ?? params.client.carrier ?? "N/A";
   const policyNumber = params.policy?.policyNumber ?? "N/A";
   const coverageAmount = formatMoney(params.policy?.faceAmount);
   const monthlyPremium = formatMoney(params.policy?.premium ?? params.client.premiumAmount);
@@ -215,7 +214,10 @@ export async function sendClientWelcomeSms(params: {
     leadVars.leadSource = lead.source ?? "";
     if (!leadVars.notes) leadVars.notes = lead.notes ?? "";
   }
+  const carrierFromForm = (leadVars.carrierQuoted ?? "").trim();
+  const carrierName = carrierFromForm || params.policy?.carrier || params.client.carrier || "N/A";
   const message = renderTemplate(template, {
+    ...leadVars,
     clientName,
     agentName: params.agentName,
     carrierName,
@@ -225,7 +227,6 @@ export async function sendClientWelcomeSms(params: {
     draftDate,
     carrierServiceNumber: getCarrierServiceNumber(carrierName),
     officeNumber: DEFAULT_OFFICE_NUMBER,
-    ...leadVars,
   });
 
   const telnyx = new Telnyx({ apiKey });
