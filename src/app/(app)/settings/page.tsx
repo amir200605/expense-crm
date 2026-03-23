@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PageHeader } from "@/components/shared/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -48,6 +55,26 @@ interface MeUser {
   role: string;
 }
 
+interface LeadPreviewListItem {
+  id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  fullName?: string | null;
+}
+
+interface LeadPreviewDetail {
+  firstName?: string | null;
+  lastName?: string | null;
+  fullName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  source?: string | null;
+  rawPayload?: Record<string, unknown> | null;
+}
+
 async function fetchSettings(): Promise<{ agency: AgencySettings; integrationsMeta?: IntegrationsMeta }> {
   const res = await fetch("/api/settings");
   if (!res.ok) throw new Error("Failed to load settings");
@@ -57,6 +84,18 @@ async function fetchSettings(): Promise<{ agency: AgencySettings; integrationsMe
 async function fetchMe(): Promise<{ user: MeUser }> {
   const res = await fetch("/api/me");
   if (!res.ok) throw new Error("Failed to load profile");
+  return res.json();
+}
+
+async function fetchPreviewLeads(): Promise<{ items: LeadPreviewListItem[] }> {
+  const res = await fetch("/api/leads?limit=100&page=1");
+  if (!res.ok) throw new Error("Failed to load leads for preview");
+  return res.json();
+}
+
+async function fetchLeadPreviewDetail(leadId: string): Promise<LeadPreviewDetail> {
+  const res = await fetch(`/api/leads/${leadId}`);
+  if (!res.ok) throw new Error("Failed to load selected lead");
   return res.json();
 }
 
@@ -291,12 +330,25 @@ export default function SettingsPage() {
   const [welcomeSmsTemplate, setWelcomeSmsTemplate] = useState("");
   const [templateSaved, setTemplateSaved] = useState(false);
   const [variableSearch, setVariableSearch] = useState("");
+  const [selectedPreviewLeadId, setSelectedPreviewLeadId] = useState<string>("");
   const templateRef = useRef<HTMLTextAreaElement | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["settings"],
     queryFn: fetchSettings,
     enabled: !isAgent,
+  });
+  const { data: previewLeadsData, isLoading: previewLeadsLoading } = useQuery({
+    queryKey: ["preview-leads"],
+    queryFn: fetchPreviewLeads,
+    enabled: !isAgent,
+    staleTime: 30_000,
+  });
+  const { data: selectedPreviewLead, isLoading: previewLeadLoading } = useQuery({
+    queryKey: ["preview-lead", selectedPreviewLeadId],
+    queryFn: () => fetchLeadPreviewDetail(selectedPreviewLeadId),
+    enabled: !isAgent && Boolean(selectedPreviewLeadId),
+    staleTime: 30_000,
   });
 
   useEffect(() => {
@@ -476,6 +528,44 @@ export default function SettingsPage() {
       el.setSelectionRange(pos, pos);
     });
   }
+
+  const previewMessage = useMemo(() => {
+    function toStr(v: unknown) {
+      if (v === null || v === undefined) return "";
+      if (typeof v === "object" && v && "toString" in v) return String((v as { toString: () => string }).toString());
+      return String(v);
+    }
+
+    const lead = selectedPreviewLead;
+    const raw = (lead?.rawPayload as Record<string, unknown> | null) ?? {};
+    const vars: Record<string, string> = {};
+    for (const [k, v] of Object.entries(raw)) vars[k] = toStr(v);
+
+    vars.firstName = vars.firstName || (lead?.firstName ?? "");
+    vars.lastName = vars.lastName || (lead?.lastName ?? "");
+    vars.fullName = vars.fullName || (lead?.fullName ?? `${lead?.firstName ?? ""} ${lead?.lastName ?? ""}`.trim());
+    vars.phone = vars.phone || (lead?.phone ?? "");
+    vars.email = vars.email || (lead?.email ?? "");
+    vars.city = vars.city || (lead?.city ?? "");
+    vars.state = vars.state || (lead?.state ?? "");
+    vars.zip = vars.zip || (lead?.zip ?? "");
+    vars.source = vars.source || (lead?.source ?? "");
+
+    // Backward-compatible variables if existing template still uses them.
+    vars.clientName = vars.fullName || "N/A";
+    vars.agentName = (sessionData?.user as { name?: string } | undefined)?.name ?? "Agent";
+    vars.carrierName = vars.carrierQuoted || "N/A";
+    vars.policyNumber = vars.policyNumber || "N/A";
+    vars.coverageAmount = vars.faceAmount || "N/A";
+    vars.monthlyPremium = vars.premium || "N/A";
+    vars.draftDate = vars.draftDate || "N/A";
+    vars.carrierServiceNumber = "";
+    vars.officeNumber = "877-864-9126";
+
+    const template = welcomeSmsTemplate.trim();
+    if (!template) return "";
+    return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key) => vars[key] ?? "");
+  }, [selectedPreviewLead, welcomeSmsTemplate, sessionData]);
 
   if (isAgent) {
     return (
@@ -808,6 +898,42 @@ export default function SettingsPage() {
                       </div>
                     ))
                   )}
+                </div>
+              </div>
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-3">
+                <p className="text-sm font-medium text-foreground">Preview</p>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Choose a lead for preview</Label>
+                  <Select value={selectedPreviewLeadId} onValueChange={setSelectedPreviewLeadId}>
+                    <SelectTrigger className="max-w-md">
+                      <SelectValue
+                        placeholder={
+                          previewLeadsLoading
+                            ? "Loading leads..."
+                            : "Select lead"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(previewLeadsData?.items ?? []).map((lead) => {
+                        const label = lead.fullName?.trim() || `${lead.firstName ?? ""} ${lead.lastName ?? ""}`.trim() || "Unnamed lead";
+                        return (
+                          <SelectItem key={lead.id} value={lead.id}>
+                            {label}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="rounded-md border border-border/70 bg-background p-3 text-sm whitespace-pre-wrap min-h-24">
+                  {!welcomeSmsTemplate.trim()
+                    ? "Type your template above to preview."
+                    : !selectedPreviewLeadId
+                      ? "Select a lead to preview with real form data."
+                      : previewLeadLoading
+                        ? "Loading preview..."
+                        : previewMessage || "Preview is empty."}
                 </div>
               </div>
               {templateMutation.isError && (
