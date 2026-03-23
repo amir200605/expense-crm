@@ -294,7 +294,6 @@ export function LeadFormSheet({
     { name: "replacementInvolvedYesNo", label: "Replacement involved yes/no" },
   ];
   const policyApplicationFields: FieldCfg[] = [
-    { name: "carrierQuoted", label: "Carrier quoted" },
     { name: "planProduct", label: "Plan/product" },
     { name: "faceAmount", label: "Face amount" },
     { name: "premium", label: "Premium" },
@@ -307,6 +306,19 @@ export function LeadFormSheet({
     { name: "approvalDate", label: "Approval date", type: "date" },
     { name: "declineReason", label: "Decline reason" },
     { name: "chargebackRisk", label: "Chargeback risk" },
+  ];
+  const carrierOptions = [
+    "Aetna-866-272-6630",
+    "Aflac-866-272-6630 (Option 1)",
+    "AIG (Corebridge) 800-255-2702",
+    "American Amicable-800-736-7311",
+    "Americo 800-231-0801",
+    "CICA 737-289-4670",
+    "Ethos 415-498-1734",
+    "Fidelity & Guarantee Life (F&G) 800-445-6758",
+    "InstaBrain 1-800-806-9714",
+    "Mutual of Omaha 800-775-7896",
+    "TransAmerica 877-234-4848",
   ];
 
   function renderTextGrid(fields: FieldCfg[]) {
@@ -503,6 +515,30 @@ export function LeadFormSheet({
 
             <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-4">
               <h3 className="text-sm font-semibold">8. Policy/application fields</h3>
+              <FormField
+                control={form.control}
+                name="carrierQuoted"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Carrier quoted</FormLabel>
+                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select carrier" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {carrierOptions.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               {renderTextGrid(policyApplicationFields)}
               <FormField
                 control={form.control}
