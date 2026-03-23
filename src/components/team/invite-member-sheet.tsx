@@ -176,21 +176,18 @@ export function InviteMemberSheet({
                 <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-primary/30 bg-muted text-xl font-semibold text-primary">
                   {(name.trim().charAt(0) || username.trim().charAt(0) || "A").toUpperCase()}
                 </div>
-                <div className="min-w-0 flex-1 space-y-1">
-                  <p className="truncate text-base font-bold uppercase tracking-wide text-primary">
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <p className="truncate text-xl font-bold uppercase tracking-wide text-primary sm:text-2xl">
                     {name.trim() || "NEW TEAM MEMBER"}
                   </p>
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                     {role.replace(/_/g, " ")}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Username: {username.trim() || "pending"}
+                  <p className="text-base text-muted-foreground">
+                    NPN: {licenseNumber.trim() || "\u2014"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    NPN: {licenseNumber.trim() || "pending"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Phone: {phone.trim() || "pending"}
+                  <p className="text-base text-muted-foreground">
+                    Phone: {phone.trim() ? phone.trim() : "\u2014"}
                   </p>
                 </div>
               </div>
