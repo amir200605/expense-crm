@@ -11,6 +11,7 @@ type SmsNewValue = {
   sendTo?: string;
   sent?: boolean;
   source?: string;
+  mediaAttached?: boolean;
 };
 
 export async function GET(
@@ -53,6 +54,7 @@ export async function GET(
       sent: nv.sent !== false,
       source: nv.source ?? (nv.message ? "automation" : "unknown"),
       sentByName: row.user?.name ?? row.user?.email ?? null,
+      mediaAttached: nv.mediaAttached === true,
     };
   });
 

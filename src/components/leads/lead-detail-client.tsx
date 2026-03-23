@@ -77,6 +77,7 @@ export type LeadSmsMessage = {
   id: string;
   createdAt: string;
   to: string | null;
+  mediaAttached?: boolean;
   message: string | null;
   sendTo: string | null;
   sent: boolean;
@@ -499,6 +500,11 @@ export function LeadDetailClient({
                           <Badge variant="secondary" className="font-normal">
                             {smsSourceLabel(m.source)}
                           </Badge>
+                          {m.mediaAttached && (
+                            <Badge variant="outline" className="text-xs border-primary/40 text-primary">
+                              MMS + Agent Card
+                            </Badge>
+                          )}
                           {!m.sent && (
                             <Badge variant="destructive" className="text-xs">
                               Not sent
