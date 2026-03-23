@@ -105,6 +105,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     npnNumber: true,
   } as const;
 
+  const selectLegacy = {
+    id: true,
+    name: true,
+    email: true,
+    role: true,
+    username: true,
+    avatarUrl: true,
+    phone: true,
+  } as const;
+
   try {
     const updated = await prisma.user.update({
       where: { id },
@@ -123,14 +133,24 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
       // DB missing newer columns (migration not applied)
       if (e.code === "P2022") {
-        const { cardImageUrl: _c, ...dataWithoutCard } = parsed.data as Record<string, unknown>;
+        const { cardImageUrl: _c, npnNumber: _n, ...dataWithoutCard } = parsed.data as Record<string, unknown>;
         const updated = await prisma.user.update({
           where: { id },
           data: dataWithoutCard,
-          select: selectWithoutCard,
+          select: selectLegacy,
         });
-        return NextResponse.json({ user: { ...updated, cardImageUrl: null } });
+        return NextResponse.json({ user: { ...updated, cardImageUrl: null, npnNumber: null } });
       }
+    }
+    if (e instanceof Prisma.PrismaClientValidationError) {
+      // Prisma client may be older than schema (unknown args/fields)
+      const { cardImageUrl: _c, npnNumber: _n, ...dataLegacy } = parsed.data as Record<string, unknown>;
+      const updated = await prisma.user.update({
+        where: { id },
+        data: dataLegacy,
+        select: selectLegacy,
+      });
+      return NextResponse.json({ user: { ...updated, cardImageUrl: null, npnNumber: null } });
     }
     throw e;
   }
