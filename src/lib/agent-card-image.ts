@@ -2,15 +2,14 @@ import path from "path";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import sharp from "sharp";
 
-const CARD_W = 600;
-const CARD_H = 280;
-/** Blue header bar height (logo + centered agency title) */
-const HEADER_H = 60;
-/** Matches invite preview / brand teal */
-const HEADER_FILL = "#5f82b3";
-const BODY_FILL = "#fafafa";
-const TEXT_MUTED = "#64748b";
+const CARD_W = 800;
+const CARD_H = 340;
+const HEADER_H = 70;
+const HEADER_FILL = "#1d3557";
+const BODY_FILL = "#ffffff";
+const TEXT_MUTED = "#475569";
 const TEXT_NAME = "#0f766e";
+const BORDER_COLOR = "#cbd5e1";
 
 function escapeXml(s: string): string {
   return s
@@ -33,17 +32,10 @@ function formatPhoneDisplay(phone: string | null | undefined): string {
   return raw;
 }
 
-/** Scale font size so a line of text roughly fits the available width (Arial-like metrics). */
-function fontSizeForLine(charCount: number, maxWidthPx: number, maxPx: number, minPx: number): number {
+function fitFontSize(charCount: number, maxWidthPx: number, maxPx: number, minPx: number): number {
   const n = Math.max(charCount, 1);
-  const ideal = maxWidthPx / (n * 0.52);
+  const ideal = maxWidthPx / (n * 0.58);
   return Math.round(Math.max(minPx, Math.min(maxPx, ideal)));
-}
-
-function headerFontSize(headerLen: number, maxWidthPx: number): number {
-  const n = Math.max(headerLen, 1);
-  const ideal = maxWidthPx / (n * 0.55);
-  return Math.round(Math.max(9, Math.min(15, ideal)));
 }
 
 async function loadAvatarDataUri(avatarUrl: string | null | undefined): Promise<string | null> {
@@ -68,13 +60,9 @@ async function loadAvatarDataUri(avatarUrl: string | null | undefined): Promise<
 function initialLetter(name: string, username: string | null | undefined): string {
   const n = name.trim();
   const u = (username ?? "").trim();
-  const ch = (n.charAt(0) || u.charAt(0) || "A").toUpperCase();
-  return ch;
+  return (n.charAt(0) || u.charAt(0) || "A").toUpperCase();
 }
 
-/**
- * Raster PNG matching the “Invite team member” card preview (header + avatar + fields).
- */
 export async function buildAgentCardPngBuffer(opts: {
   agencyName: string;
   name: string;
@@ -84,87 +72,75 @@ export async function buildAgentCardPngBuffer(opts: {
   phone: string | null;
   avatarUrl: string | null;
 }): Promise<Buffer> {
-  // Product requirement: keep card title consistent across all previews/messages.
-  const headerTextTop = "PRIME INSURANCE";
-  const headerTextBottom = "AGENCY";
+  const headerText = "PRIME INSURANCE AGENCY";
   const nameRaw = (opts.name.trim() || "TEAM MEMBER").toUpperCase();
   const displayName = escapeXml(nameRaw);
   const npnTrim = (opts.npnNumber ?? "").trim();
   const displayNpn = escapeXml(npnTrim || EMPTY_DASH);
   const displayPhone = escapeXml(formatPhoneDisplay(opts.phone));
-  const licensedSubtitleRaw = "LICENSED LIFE & HEALTH INSURANCE AGENT";
-  const licensedSubtitle = escapeXml(licensedSubtitleRaw);
+  const licensedSubtitle = "LICENSED LIFE &amp; HEALTH INSURANCE AGENT";
 
-  const textLeft = 176;
-  const textWidth = CARD_W - textLeft - 24;
-  const headerTopFs = headerFontSize(headerTextTop.length, CARD_W - 220) + 5;
-  const headerBottomFs = 18;
+  const avatarCx = 110;
+  const avatarCy = HEADER_H + (CARD_H - HEADER_H) / 2;
+  const avatarR = 56;
+
+  const textLeft = avatarCx + avatarR + 30;
+  const textWidth = CARD_W - textLeft - 30;
+
+  const nameFs = fitFontSize(nameRaw.length, textWidth, 34, 16);
+  const subtitleFs = Math.round(Math.min(13, Math.max(9, nameFs * 0.38)));
+  const detailFs = Math.round(Math.min(17, Math.max(12, nameFs * 0.48)));
+
+  const yName = HEADER_H + 50;
+  const ySubtitle = yName + Math.round(nameFs * 0.9) + 6;
+  const yNpn = ySubtitle + Math.round(subtitleFs * 1.2) + 14;
+  const yPhone = yNpn + Math.round(detailFs * 1.3) + 6;
+
   const headerCx = CARD_W / 2;
-  /** Sit shield toward the top of the bar; agency title stays centered */
-  const logoDy = 2;
-  /** Baselines for centered agency block (fits within HEADER_H) */
-  const yHeaderTop = 24;
-  const yHeaderDivider = 32;
-  const yHeaderAgency = 48;
-  const nameFs = fontSizeForLine(nameRaw.length, textWidth, 36, 20);
-  const subtitleFs = Math.round(Math.min(14, Math.max(10, nameFs * 0.34)));
-  const detailFs = Math.round(Math.min(18, Math.max(13, nameFs * 0.48)));
-
-  const yName = 118;
-  const ySubtitle = yName + Math.round(nameFs * 0.95) + 6;
-  const yNpn = ySubtitle + Math.round(subtitleFs * 1.15) + 12;
-  const yPhone = yNpn + Math.round(detailFs * 1.2) + 8;
 
   const avatarData = await loadAvatarDataUri(opts.avatarUrl);
   const letter = initialLetter(opts.name, opts.username);
 
-  const cx = 92;
-  const cy = 156;
-  const r = 48;
-
   const avatarBlock = avatarData
     ? `
   <defs>
-    <clipPath id="avclip"><circle cx="${cx}" cy="${cy}" r="${r}"/></clipPath>
+    <clipPath id="avclip"><circle cx="${avatarCx}" cy="${avatarCy}" r="${avatarR}"/></clipPath>
   </defs>
-  <circle cx="${cx}" cy="${cy}" r="${r}" fill="#f0fdfa" stroke="#99f6e4" stroke-width="2"/>
-  <image href="${avatarData}" x="${cx - r}" y="${cy - r}" width="${r * 2}" height="${r * 2}" clip-path="url(#avclip)" preserveAspectRatio="xMidYMid slice"/>
+  <circle cx="${avatarCx}" cy="${avatarCy}" r="${avatarR + 2}" fill="${BORDER_COLOR}"/>
+  <circle cx="${avatarCx}" cy="${avatarCy}" r="${avatarR}" fill="#f0fdfa"/>
+  <image href="${avatarData}" x="${avatarCx - avatarR}" y="${avatarCy - avatarR}" width="${avatarR * 2}" height="${avatarR * 2}" clip-path="url(#avclip)" preserveAspectRatio="xMidYMid slice"/>
 `
     : `
-  <circle cx="${cx}" cy="${cy}" r="${r}" fill="#f0fdfa" stroke="#99f6e4" stroke-width="2"/>
-  <text x="${cx}" y="${cy + 10}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="600" fill="${TEXT_NAME}">${escapeXml(letter)}</text>
+  <circle cx="${avatarCx}" cy="${avatarCy}" r="${avatarR + 2}" fill="${BORDER_COLOR}"/>
+  <circle cx="${avatarCx}" cy="${avatarCy}" r="${avatarR}" fill="#f0fdfa"/>
+  <text x="${avatarCx}" y="${avatarCy + 12}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="600" fill="${TEXT_NAME}">${escapeXml(letter)}</text>
 `;
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${CARD_W}" height="${CARD_H}" xmlns="http://www.w3.org/2000/svg">
-  <rect x="0" y="0" width="${CARD_W}" height="60" fill="${HEADER_FILL}"/>
-  <g transform="translate(16,6)">
-    <path d="M26 2 C18 8, 10 8, 2 10 V23 C2 35, 11 45, 26 53 C41 45, 50 35, 50 23 V10 C42 8, 34 8, 26 2 Z" fill="#d8e2f1" stroke="#1d3557" stroke-width="2"/>
-    <path d="M26 9 C20 13, 14 13, 9 15 V24 C9 32, 15 39, 26 45 C37 39, 43 32, 43 24 V15 C38 13, 32 13, 26 9 Z" fill="#1d3557"/>
-    <line x1="26" y1="15" x2="26" y2="38" stroke="#d8e2f1" stroke-width="2"/>
-    <line x1="14" y1="22" x2="38" y2="22" stroke="#d8e2f1" stroke-width="2"/>
-    <circle cx="20" cy="30" r="2.5" fill="#d8e2f1"/>
-    <circle cx="32" cy="30" r="2.5" fill="#d8e2f1"/>
-    <line x1="20" y1="33" x2="20" y2="39" stroke="#d8e2f1" stroke-width="1.6"/>
-    <line x1="32" y1="33" x2="32" y2="39" stroke="#d8e2f1" stroke-width="1.6"/>
+  <rect x="0" y="0" width="${CARD_W}" height="${CARD_H}" rx="12" fill="${BODY_FILL}" stroke="${BORDER_COLOR}" stroke-width="2"/>
+  <rect x="0" y="0" width="${CARD_W}" height="${HEADER_H}" rx="12" fill="${HEADER_FILL}"/>
+  <rect x="0" y="${HEADER_H - 12}" width="${CARD_W}" height="12" fill="${HEADER_FILL}"/>
+  <g transform="translate(20,10)">
+    <path d="M22 2 C15 7, 9 7, 2 9 V20 C2 30, 10 38, 22 44 C34 38, 42 30, 42 20 V9 C35 7, 29 7, 22 2 Z" fill="#d8e2f1" stroke="#7b9cc2" stroke-width="1.5"/>
+    <path d="M22 8 C17 11, 12 11, 8 13 V20 C8 27, 13 33, 22 38 C31 33, 36 27, 36 20 V13 C32 11, 27 11, 22 8 Z" fill="#2a5a8a"/>
+    <line x1="22" y1="13" x2="22" y2="32" stroke="#d8e2f1" stroke-width="1.8"/>
+    <line x1="12" y1="19" x2="32" y2="19" stroke="#d8e2f1" stroke-width="1.8"/>
+    <circle cx="17" cy="26" r="2" fill="#d8e2f1"/>
+    <circle cx="27" cy="26" r="2" fill="#d8e2f1"/>
   </g>
-  <text x="${headerCx}" y="${yHeaderTop}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${headerTopFs}" font-weight="700" letter-spacing="0.08em" fill="#0b1d35">${headerTextTop}</text>
-  <line x1="${headerCx - 140}" y1="${yHeaderDivider}" x2="${headerCx + 140}" y2="${yHeaderDivider}" stroke="#0b1d35" stroke-width="1.6"/>
-  <text x="${headerCx}" y="${yHeaderAgency}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${headerBottomFs}" font-weight="700" letter-spacing="0.08em" fill="#0b1d35">${headerTextBottom}</text>
-  <rect x="0" y="${HEADER_H}" width="${CARD_W}" height="${CARD_H - HEADER_H}" fill="${BODY_FILL}" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="${headerCx}" y="${HEADER_H / 2 + 7}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" letter-spacing="0.12em" fill="#ffffff">${escapeXml(headerText)}</text>
   ${avatarBlock}
   <text x="${textLeft}" y="${yName}" font-family="Arial, Helvetica, sans-serif" font-size="${nameFs}" font-weight="700" fill="${TEXT_NAME}" letter-spacing="0.03em">${displayName}</text>
   <text x="${textLeft}" y="${ySubtitle}" font-family="Arial, Helvetica, sans-serif" font-size="${subtitleFs}" font-weight="600" fill="${TEXT_MUTED}" letter-spacing="0.04em">${licensedSubtitle}</text>
-  <text x="${textLeft}" y="${yNpn}" font-family="Arial, Helvetica, sans-serif" font-size="${detailFs}" fill="${TEXT_MUTED}">NPN: ${displayNpn}</text>
-  <text x="${textLeft}" y="${yPhone}" font-family="Arial, Helvetica, sans-serif" font-size="${detailFs}" fill="${TEXT_MUTED}">Phone: ${displayPhone}</text>
+  <line x1="${textLeft}" y1="${ySubtitle + 8}" x2="${textLeft + 180}" y2="${ySubtitle + 8}" stroke="${BORDER_COLOR}" stroke-width="1"/>
+  <text x="${textLeft}" y="${yNpn}" font-family="Arial, Helvetica, sans-serif" font-size="${detailFs}" fill="${TEXT_MUTED}"><tspan font-weight="600">NPN:</tspan> ${displayNpn}</text>
+  <text x="${textLeft}" y="${yPhone}" font-family="Arial, Helvetica, sans-serif" font-size="${detailFs}" fill="${TEXT_MUTED}"><tspan font-weight="600">Phone:</tspan> ${displayPhone}</text>
 </svg>`;
 
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
-/**
- * Writes PNG under `public/uploads/agent-cards/generated/` and returns absolute public URL for MMS.
- */
 export async function writeAgentCardToPublicUrl(params: {
   userId: string;
   agencyName: string;
