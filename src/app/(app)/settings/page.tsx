@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -290,6 +290,7 @@ export default function SettingsPage() {
   const [testSmsResult, setTestSmsResult] = useState<{ ok: boolean; message?: string } | null>(null);
   const [welcomeSmsTemplate, setWelcomeSmsTemplate] = useState("");
   const [templateSaved, setTemplateSaved] = useState(false);
+  const [variableSearch, setVariableSearch] = useState("");
   const templateRef = useRef<HTMLTextAreaElement | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -410,20 +411,61 @@ export default function SettingsPage() {
     templateMutation.mutate(welcomeSmsTemplate);
   }
 
-  const templateVariables = [
-    "clientName", "agentName", "carrierName", "policyNumber", "coverageAmount", "monthlyPremium", "draftDate", "carrierServiceNumber", "officeNumber",
-    "leadFirstName", "leadLastName", "leadFullName", "leadPhone", "leadEmail", "leadCity", "leadState", "leadZip", "leadDisposition", "leadPipelineStage", "leadSource",
-    "fullName", "phone", "phone2", "dateOfBirth", "age", "gender", "maritalStatus", "address", "city", "state", "zip", "county", "timeZone",
-    "preferredContactMethod", "bestTimeToCall", "vendor", "campaign", "leadCost", "dateLeadReceived", "leadType", "leadFreshness", "spouseName",
-    "beneficiaryName", "beneficiaryRelation", "beneficiaryPhone", "emergencyContact", "childrenYesNo", "grandchildrenYesNo", "decisionMakerNotes",
-    "coverageAmountInterest", "budgetMonthlyPremiumTarget", "burialOrCremationPreference", "existingLifeInsuranceYesNo", "existingPolicyAmount",
-    "concernReasonForBuying", "wantsFuneralPlanningHelpYesNo", "preferredPaymentMode", "height", "weight", "tobaccoStatus", "prescriptionMedications",
-    "majorConditions", "hospitalizationsLast2Years", "cancerHistory", "heartHistory", "diabetes", "copdOxygenUse", "strokeHistory", "kidneyDisease",
-    "mobilityIssues", "mentalCapacityConcerns", "nursingHomeAssistedLivingStatus", "recentSurgeries", "underwritingClassEstimatedEligibility",
-    "knockoutConditionYesNo", "bankName", "routingNumber", "accountNumber", "socialSecurityOrLast4", "incomeSource", "beneficiaryPayorIfDifferent",
-    "paymentMethod", "replacementInvolvedYesNo", "carrierQuoted", "planProduct", "faceAmount", "premium", "applicationDate", "applicationStatus",
-    "writingAgent", "splitAgent", "effectiveDate", "approvalDate", "declineReason", "chargebackRisk", "persistencyNotes", "notes",
-  ] as const;
+  const variableGroups: Array<{ id: string; title: string; items: readonly string[] }> = [
+    {
+      id: "1",
+      title: "1. Core client/policy variables",
+      items: ["clientName", "agentName", "carrierName", "policyNumber", "coverageAmount", "monthlyPremium", "draftDate", "carrierServiceNumber", "officeNumber"],
+    },
+    {
+      id: "2",
+      title: "2. Lead core variables",
+      items: ["leadFirstName", "leadLastName", "leadFullName", "leadPhone", "leadEmail", "leadCity", "leadState", "leadZip", "leadDisposition", "leadPipelineStage", "leadSource"],
+    },
+    {
+      id: "3",
+      title: "3. Client information fields",
+      items: ["fullName", "phone", "phone2", "dateOfBirth", "age", "gender", "maritalStatus", "address", "city", "state", "zip", "county", "timeZone", "preferredContactMethod", "bestTimeToCall"],
+    },
+    {
+      id: "4",
+      title: "4. Lead source fields",
+      items: ["vendor", "campaign", "leadCost", "dateLeadReceived", "leadType", "leadFreshness"],
+    },
+    {
+      id: "5",
+      title: "5. Personal/family fields",
+      items: ["spouseName", "beneficiaryName", "beneficiaryRelation", "beneficiaryPhone", "emergencyContact", "childrenYesNo", "grandchildrenYesNo", "decisionMakerNotes"],
+    },
+    {
+      id: "6",
+      title: "6. Final expense needs fields",
+      items: ["coverageAmountInterest", "budgetMonthlyPremiumTarget", "burialOrCremationPreference", "existingLifeInsuranceYesNo", "existingPolicyAmount", "concernReasonForBuying", "wantsFuneralPlanningHelpYesNo", "preferredPaymentMode"],
+    },
+    {
+      id: "7",
+      title: "7. Health underwriting fields",
+      items: ["height", "weight", "tobaccoStatus", "prescriptionMedications", "majorConditions", "hospitalizationsLast2Years", "cancerHistory", "heartHistory", "diabetes", "copdOxygenUse", "strokeHistory", "kidneyDisease", "mobilityIssues", "mentalCapacityConcerns", "nursingHomeAssistedLivingStatus", "recentSurgeries", "underwritingClassEstimatedEligibility", "knockoutConditionYesNo"],
+    },
+    {
+      id: "8",
+      title: "8. Financial/payment fields",
+      items: ["bankName", "routingNumber", "accountNumber", "socialSecurityOrLast4", "incomeSource", "beneficiaryPayorIfDifferent", "paymentMethod", "replacementInvolvedYesNo"],
+    },
+    {
+      id: "9",
+      title: "9. Policy/application fields",
+      items: ["carrierQuoted", "planProduct", "faceAmount", "premium", "applicationDate", "applicationStatus", "writingAgent", "splitAgent", "effectiveDate", "approvalDate", "declineReason", "chargebackRisk", "persistencyNotes", "notes"],
+    },
+  ];
+
+  const filteredVariableGroups = useMemo(() => {
+    const q = variableSearch.trim().toLowerCase();
+    if (!q) return variableGroups;
+    return variableGroups
+      .map((g) => ({ ...g, items: g.items.filter((v) => v.toLowerCase().includes(q)) }))
+      .filter((g) => g.items.length > 0);
+  }, [variableSearch]);
 
   function insertTemplateVariable(variable: string) {
     const token = `{{${variable}}}`;
@@ -744,19 +786,38 @@ export default function SettingsPage() {
               </div>
               <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
                 <p className="font-medium text-foreground">Available variables</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {templateVariables.map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      className="rounded-md border border-border/70 bg-background px-2 py-1 text-[11px] text-foreground hover:bg-accent"
-                      onClick={() => insertTemplateVariable(v)}
-                      disabled={!canEdit}
-                      title={`Insert {{${v}}}`}
-                    >
-                      {`{{${v}}}`}
-                    </button>
-                  ))}
+                <div className="max-w-sm">
+                  <Input
+                    value={variableSearch}
+                    onChange={(e) => setVariableSearch(e.target.value)}
+                    placeholder="Search variable..."
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                  {filteredVariableGroups.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No variables found.</p>
+                  ) : (
+                    filteredVariableGroups.map((group) => (
+                      <div key={group.id} className="space-y-1.5">
+                        <p className="text-[11px] font-semibold text-foreground">{group.title}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {group.items.map((v) => (
+                            <button
+                              key={v}
+                              type="button"
+                              className="rounded-md border border-border/70 bg-background px-2 py-1 text-[11px] text-foreground hover:bg-accent"
+                              onClick={() => insertTemplateVariable(v)}
+                              disabled={!canEdit}
+                              title={`Insert {{${v}}}`}
+                            >
+                              {`{{${v}}}`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
               {templateMutation.isError && (
