@@ -62,7 +62,7 @@ Policy Number: {{policyNumber}}
 
 Coverage Amount: {{coverageAmount}}
 
-Monthly Premium: ${{monthlyPremium}}
+Monthly Premium: \${{monthlyPremium}}
 
 Payment Method: Direct Express card
 
