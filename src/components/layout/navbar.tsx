@@ -76,17 +76,6 @@ export function Navbar({ user }: { user: SessionUser }) {
 
   return (
     <header className="navbar-dark sticky top-0 z-40 flex h-14 shrink-0 items-center gap-6 px-4 lg:px-6">
-      {/* Brand (visible when sidebar is present; optional duplicate for identity) */}
-      <Link
-        href="/dashboard"
-        className="hidden items-center gap-2 rounded-lg py-2 pr-3 text-sidebar-foreground transition-colors hover:bg-white/10 sm:flex"
-      >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <LayoutDashboard className="h-4 w-4" />
-        </span>
-        <span className="font-semibold text-sm tracking-tight">Prime Insurance Agency CRM</span>
-      </Link>
-
       {/* Search */}
       <div className="hidden flex-1 max-w-md lg:block">
         <div className="relative">

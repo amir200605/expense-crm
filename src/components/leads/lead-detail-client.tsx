@@ -28,6 +28,7 @@ import {
 import { ArrowLeft, Trash2, UserCheck } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { getDispositionBadgeVariant, getStageBadgeVariant } from "@/lib/status-pill";
+import { LeadFormSheet } from "@/components/leads/lead-form-sheet";
 import {
   fetchLeadById,
   fetchLeadSms,
@@ -63,6 +64,7 @@ export type LeadDetail = {
   assignedAgent: { id?: string; name: string | null; email: string | null } | null;
   assignedManager: { name: string | null } | null;
   client?: { id: string } | null;
+  rawPayload?: Record<string, unknown> | null;
 };
 
 async function fetchTeam(): Promise<{ members: TeamMember[] }> {
@@ -99,6 +101,7 @@ export function LeadDetailClient({
   const router = useRouter();
   const { data: session } = useSession();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   /** After first open, keep these panels mounted so switching tabs doesn't remount heavy trees (Select, SMS list). */
   const [keepCommsMounted, setKeepCommsMounted] = useState(false);
@@ -198,6 +201,7 @@ export function LeadDetailClient({
 
   const name = lead?.fullName || (lead ? `${lead.firstName} ${lead.lastName}` : "");
   const currentAgentId = lead?.assignedAgent?.id ?? "";
+  const extra = (lead?.rawPayload ?? {}) as Record<string, unknown>;
 
   return (
     <div className="space-y-6">
@@ -225,8 +229,8 @@ export function LeadDetailClient({
               {convertMutation.isPending ? "Converting…" : "Convert to client"}
             </Button>
           )}
-          <Button variant="outline" asChild>
-            <Link href={`/leads?edit=${leadId}`}>Edit</Link>
+          <Button variant="outline" type="button" onClick={() => setEditOpen(true)}>
+            Edit
           </Button>
           {canDeleteLead && (
             <Button
@@ -268,6 +272,17 @@ export function LeadDetailClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <LeadFormSheet
+        open={editOpen}
+        leadId={leadId}
+        onOpenChange={(next) => {
+          setEditOpen(next);
+          if (!next) {
+            queryClient.invalidateQueries({ queryKey: ["lead", leadId] });
+            queryClient.invalidateQueries({ queryKey: ["leads"] });
+          }
+        }}
+      />
 
       <Tabs value={activeTab} onValueChange={onTabChange}>
         <TabsList className="bg-muted/30">
@@ -345,6 +360,39 @@ export function LeadDetailClient({
               </div>
             </CardContent>
           </Card>
+          {Object.keys(extra).length > 0 && (
+            <Card className="border-border/80 shadow-soft">
+              <CardHeader>
+                <CardTitle className="text-base">Additional lead information</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Phone 2</p>
+                  <p className="text-sm">{String(extra.phone2 ?? "—")}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Marital status</p>
+                  <p className="text-sm">{String(extra.maritalStatus ?? "—")}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Beneficiary relationship</p>
+                  <p className="text-sm">{String(extra.beneficiaryRelation ?? "—")}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Coverage amount wanted</p>
+                  <p className="text-sm">{String(extra.coverageAmountInterest ?? "—")}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Carrier quoted</p>
+                  <p className="text-sm">{String(extra.carrierQuoted ?? "—")}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Plan/product</p>
+                  <p className="text-sm">{String(extra.planProduct ?? "—")}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           {lead?.notes && (
             <Card className="border-border/80 shadow-soft">
               <CardHeader>

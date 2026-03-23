@@ -19,6 +19,15 @@ function parseOptionalNumber(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function toJsonObject(value: unknown): Prisma.InputJsonValue | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  try {
+    return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function findDuplicateLeads(agencyId: string, data: { phone: string; email?: string; firstName: string; lastName: string; dateOfBirth?: string }) {
   const phoneNorm = normalizePhone(data.phone);
   const conditions: Prisma.LeadWhereInput[] = [];
@@ -80,17 +89,17 @@ export async function createLead(agencyId: string, input: CreateLeadInput, rawPa
       subId: input.subId ?? null,
       dateOfBirth,
       gender: input.gender ?? null,
-      address1: input.address1 ?? null,
+      address1: input.address1 ?? input.address ?? null,
       address2: input.address2 ?? null,
       city: input.city ?? null,
       state: input.state ?? null,
       zip: input.zip ?? null,
       county: input.county ?? null,
-      smokerStatus: input.smokerStatus ?? null,
+      smokerStatus: input.smokerStatus ?? input.tobaccoStatus ?? null,
       coverageAmountInterest: parseOptionalNumber(input.coverageAmountInterest),
       beneficiaryName: input.beneficiaryName ?? null,
       preferredLanguage: input.preferredLanguage ?? null,
-      bestCallTime: input.bestCallTime ?? null,
+      bestCallTime: input.bestCallTime ?? input.bestTimeToCall ?? null,
       leadCost: parseOptionalNumber(input.leadCost),
       leadScore: parseOptionalInt(input.leadScore),
       consentStatus: input.consentStatus ?? null,
@@ -115,6 +124,14 @@ export async function updateLead(id: string, input: UpdateLeadInput) {
   const fullName = input.firstName != null || input.lastName != null
     ? [input.firstName ?? "", input.lastName ?? ""].filter(Boolean).join(" ").trim() || undefined
     : undefined;
+  const existing = await prisma.lead.findUnique({
+    where: { id },
+    select: { rawPayload: true },
+  });
+  const mergedPayload = {
+    ...((existing?.rawPayload as Record<string, unknown> | null) ?? {}),
+    ...input,
+  };
   return prisma.lead.update({
     where: { id },
     data: {
@@ -123,25 +140,34 @@ export async function updateLead(id: string, input: UpdateLeadInput) {
       ...(fullName != null && { fullName }),
       ...(input.phone != null && { phone: input.phone }),
       ...(input.email !== undefined && { email: input.email || null }),
+      ...(input.age !== undefined && { age: parseOptionalInt(input.age) }),
       ...(input.source !== undefined && { source: input.source ?? null }),
       ...(input.vendor !== undefined && { vendor: input.vendor ?? null }),
       ...(input.campaign !== undefined && { campaign: input.campaign ?? null }),
       ...(input.subId !== undefined && { subId: input.subId ?? null }),
       ...(input.dateOfBirth !== undefined && { dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : null }),
       ...(input.gender !== undefined && { gender: input.gender ?? null }),
-      ...(input.address1 !== undefined && { address1: input.address1 ?? null }),
+      ...((input.address1 !== undefined || input.address !== undefined) && {
+        address1: input.address1 ?? input.address ?? null,
+      }),
       ...(input.address2 !== undefined && { address2: input.address2 ?? null }),
       ...(input.city !== undefined && { city: input.city ?? null }),
       ...(input.state !== undefined && { state: input.state ?? null }),
       ...(input.zip !== undefined && { zip: input.zip ?? null }),
       ...(input.county !== undefined && { county: input.county ?? null }),
-      ...(input.smokerStatus !== undefined && { smokerStatus: input.smokerStatus ?? null }),
-      ...(input.coverageAmountInterest !== undefined && { coverageAmountInterest: input.coverageAmountInterest ?? null }),
+      ...((input.smokerStatus !== undefined || input.tobaccoStatus !== undefined) && {
+        smokerStatus: input.smokerStatus ?? input.tobaccoStatus ?? null,
+      }),
+      ...(input.coverageAmountInterest !== undefined && {
+        coverageAmountInterest: parseOptionalNumber(input.coverageAmountInterest),
+      }),
       ...(input.beneficiaryName !== undefined && { beneficiaryName: input.beneficiaryName ?? null }),
       ...(input.preferredLanguage !== undefined && { preferredLanguage: input.preferredLanguage ?? null }),
-      ...(input.bestCallTime !== undefined && { bestCallTime: input.bestCallTime ?? null }),
-      ...(input.leadCost !== undefined && { leadCost: input.leadCost ?? null }),
-      ...(input.leadScore !== undefined && { leadScore: input.leadScore ?? null }),
+      ...((input.bestCallTime !== undefined || input.bestTimeToCall !== undefined) && {
+        bestCallTime: input.bestCallTime ?? input.bestTimeToCall ?? null,
+      }),
+      ...(input.leadCost !== undefined && { leadCost: parseOptionalNumber(input.leadCost) }),
+      ...(input.leadScore !== undefined && { leadScore: parseOptionalInt(input.leadScore) }),
       ...(input.consentStatus !== undefined && { consentStatus: input.consentStatus ?? null }),
       ...(input.doNotCall !== undefined && { doNotCall: input.doNotCall }),
       ...(input.assignedAgentId !== undefined && { assignedAgentId: input.assignedAgentId ?? null }),
@@ -151,6 +177,7 @@ export async function updateLead(id: string, input: UpdateLeadInput) {
       ...(input.notes !== undefined && { notes: input.notes ?? null }),
       ...(input.lastContactedAt !== undefined && { lastContactedAt: input.lastContactedAt ? new Date(input.lastContactedAt) : null }),
       ...(input.nextFollowUpAt !== undefined && { nextFollowUpAt: input.nextFollowUpAt ? new Date(input.nextFollowUpAt) : null }),
+      ...(toJsonObject(mergedPayload) !== undefined && { rawPayload: toJsonObject(mergedPayload)! }),
     },
     include: {
       assignedAgent: { select: { id: true, name: true, email: true } },
@@ -162,7 +189,6 @@ export async function updateLead(id: string, input: UpdateLeadInput) {
 export async function getLeadById(id: string) {
   return prisma.lead.findUnique({
     where: { id },
-    omit: { rawPayload: true },
     include: {
       assignedAgent: { select: { id: true, name: true, email: true } },
       assignedManager: { select: { id: true, name: true, email: true } },

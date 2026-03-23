@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -84,6 +85,9 @@ const STAGE_OPTIONS = [
 ];
 
 export default function LeadsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const editLeadId = searchParams.get("edit");
   const { data: session } = useSession();
   const role = (session?.user as { role?: string } | undefined)?.role;
   const showDeleteLead = role && role !== "QA_COMPLIANCE";
@@ -165,13 +169,22 @@ export default function LeadsPage() {
         title="Leads"
         description="Manage and track your leads"
         actions={
-          <Button onClick={() => setFormOpen(true)}>
+          <Button onClick={() => { setFormOpen(true); router.replace("/leads"); }}>
             <Plus className="mr-2 h-4 w-4" />
             Add lead
           </Button>
         }
       />
-      <LeadFormSheet open={formOpen} onOpenChange={setFormOpen} />
+      <LeadFormSheet
+        open={formOpen || Boolean(editLeadId)}
+        leadId={editLeadId}
+        onOpenChange={(next) => {
+          if (!next && editLeadId) {
+            router.replace("/leads");
+          }
+          setFormOpen(next);
+        }}
+      />
 
       <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <DialogContent>

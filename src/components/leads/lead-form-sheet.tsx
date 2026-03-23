@@ -59,6 +59,58 @@ async function createLeadApi(data: CreateLeadInput) {
   return res.json();
 }
 
+async function updateLeadApi(id: string, data: CreateLeadInput) {
+  const res = await fetch(`/api/leads/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string; details?: unknown };
+    const detail =
+      err.details != null
+        ? ` ${typeof err.details === "string" ? err.details : JSON.stringify(err.details)}`
+        : "";
+    throw new Error((err.error ?? "Failed to update lead") + detail);
+  }
+  return res.json();
+}
+
+async function fetchLeadForEdit(id: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`/api/leads/${id}`, { credentials: "same-origin" });
+  if (!res.ok) throw new Error("Failed to load lead for edit");
+  return res.json();
+}
+
+function toDateInput(v: unknown): string {
+  if (!v) return "";
+  const s = String(v);
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
+function buildFormValuesFromLead(data: Record<string, unknown>): CreateLeadInput {
+  const defaults = getEmptyLeadValues() as Record<string, unknown>;
+  const raw = (data.rawPayload && typeof data.rawPayload === "object" ? data.rawPayload : {}) as Record<string, unknown>;
+  const merged = { ...raw, ...data };
+  const next: Record<string, unknown> = { ...defaults };
+  Object.keys(defaults).forEach((k) => {
+    const val = merged[k];
+    if (val === null || val === undefined) return;
+    next[k] = val;
+  });
+  next.address = (merged.address as string | undefined) ?? (merged.address1 as string | undefined) ?? "";
+  next.bestTimeToCall = (merged.bestTimeToCall as string | undefined) ?? (merged.bestCallTime as string | undefined) ?? "";
+  next.tobaccoStatus = (merged.tobaccoStatus as string | undefined) ?? (merged.smokerStatus as string | undefined) ?? "";
+  next.dateOfBirth = toDateInput(merged.dateOfBirth);
+  next.dateLeadReceived = toDateInput(merged.dateLeadReceived);
+  next.applicationDate = toDateInput(merged.applicationDate);
+  next.effectiveDate = toDateInput(merged.effectiveDate);
+  next.approvalDate = toDateInput(merged.approvalDate);
+  next.draftDate = toDateInput(merged.draftDate);
+  return next as CreateLeadInput;
+}
+
 async function fetchTeam(): Promise<{ members: TeamMember[] }> {
   const res = await fetch("/api/team");
   if (!res.ok) return { members: [] };
@@ -173,9 +225,11 @@ function toCreateLeadPayload(values: CreateLeadInput): CreateLeadInput {
 export function LeadFormSheet({
   open,
   onOpenChange,
+  leadId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  leadId?: string | null;
 }) {
   const queryClient = useQueryClient();
   const defaultLeadValues = useMemo(() => getEmptyLeadValues(), []);
@@ -184,11 +238,21 @@ export function LeadFormSheet({
     defaultValues: defaultLeadValues,
   });
 
+  const { data: leadEditData } = useQuery({
+    queryKey: ["lead-edit", leadId],
+    queryFn: () => fetchLeadForEdit(leadId!),
+    enabled: open && Boolean(leadId),
+    staleTime: 15_000,
+  });
+
   useEffect(() => {
-    if (open) {
-      form.reset(defaultLeadValues);
+    if (!open) return;
+    if (leadId && leadEditData) {
+      form.reset(buildFormValuesFromLead(leadEditData));
+      return;
     }
-  }, [open, form, defaultLeadValues]);
+    form.reset(defaultLeadValues);
+  }, [open, leadId, leadEditData, form, defaultLeadValues]);
 
   const { data: teamData } = useQuery({
     queryKey: ["team"],
@@ -201,13 +265,15 @@ export function LeadFormSheet({
   );
 
   const mutation = useMutation({
-    mutationFn: createLeadApi,
+    mutationFn: (payload: CreateLeadInput) =>
+      leadId ? updateLeadApi(leadId, payload) : createLeadApi(payload),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      if (leadId) queryClient.invalidateQueries({ queryKey: ["lead", leadId] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
       form.reset(defaultLeadValues);
       onOpenChange(false);
-      if (data.lead?.id) {
+      if (!leadId && data.lead?.id) {
         window.location.href = `/leads/${data.lead.id}`;
       }
     },
@@ -352,7 +418,7 @@ export function LeadFormSheet({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Add lead</DialogTitle>
+          <DialogTitle>{leadId ? "Edit lead" : "Add lead"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 py-4">
@@ -583,7 +649,7 @@ export function LeadFormSheet({
                 Cancel
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? "Creating…" : "Create lead"}
+                {mutation.isPending ? (leadId ? "Saving…" : "Creating…") : leadId ? "Save changes" : "Create lead"}
               </Button>
             </DialogFooter>
           </form>
