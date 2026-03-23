@@ -159,18 +159,7 @@ Draft Date: ${draftDate}
 For customer service, you can also contact TransAmerica at 877-234-4848.
 
 You've taken an important step toward ensuring your family is protected and prepared for any final expenses. If you have any questions or need anything at all, please don't hesitate to reach out-I'm here to help anytime!
-${getCarrierServiceNumber(carrierName)}
-Aetna-866-272-6630
-Aflac-866-272-6630 (Option 1)
-AIG (Corebridge) 800-255-2702
-American Amicable-800-736-7311
-Americo 800-231-0801
-CICA 737-289-4670
-Ethos 415-498-1734
-Fidelity & Guarantee Life (F&G) 800-445-6758
-InstaBrain 1-800-806-9714
-Mutual of Omaha 800-775-7896
-TransAmerica 877-234-4848`;
+${getCarrierServiceNumber(carrierName)}`;
 
   const telnyx = new Telnyx({ apiKey });
   let sendParams: ReturnType<typeof buildTelnyxSendParams>;
