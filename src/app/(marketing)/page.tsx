@@ -9,9 +9,9 @@ export default function LandingPage() {
         <div className="container mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground text-base font-bold shadow-sm">
-              E
+              P
             </div>
-            <span className="font-semibold text-lg tracking-tight">ExpenseFlow</span>
+            <span className="font-semibold text-lg tracking-tight">Prime Insurance Agency CRM</span>
           </Link>
           <nav className="flex items-center gap-2">
             <Link href="/login">

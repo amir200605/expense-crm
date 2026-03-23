@@ -129,7 +129,7 @@ export function Sidebar({ user, onOpenMessages }: { user: SessionUser; onOpenMes
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <LayoutDashboard className="h-4 w-4" />
           </span>
-          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">ExpenseFlow</span>
+          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">Prime Insurance Agency CRM</span>
         </Link>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3 scrollbar-thin">

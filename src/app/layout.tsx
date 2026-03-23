@@ -10,8 +10,8 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "ExpenseFlow CRM",
-  description: "Final Expense CRM for insurance agencies and agents",
+  title: "Prime Insurance Agency CRM",
+  description: "Prime Insurance Agency CRM for insurance agencies and agents",
 };
 
 export default function RootLayout({
