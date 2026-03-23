@@ -167,12 +167,6 @@ export async function sendClientWelcomeSms(params: {
   }
 
   const clientName = `${params.client.firstName} ${params.client.lastName}`.trim();
-  const policyNumber = params.policy?.policyNumber ?? "N/A";
-  const coverageAmount = formatMoney(params.policy?.faceAmount);
-  const monthlyPremium = formatMoney(params.policy?.premium ?? params.client.premiumAmount);
-  const draftDate = params.policy?.paymentDraftDate
-    ? new Date(params.policy.paymentDraftDate).toLocaleDateString("en-US")
-    : "N/A";
 
   const template = (settings.templates as { welcomeSms?: string } | undefined)?.welcomeSms?.trim() || DEFAULT_WELCOME_SMS_TEMPLATE;
   const lead = params.logToLead?.leadId
@@ -214,6 +208,24 @@ export async function sendClientWelcomeSms(params: {
     leadVars.leadSource = lead.source ?? "";
     if (!leadVars.notes) leadVars.notes = lead.notes ?? "";
   }
+  const policyNumber =
+    params.policy?.policyNumber?.trim() ||
+    (leadVars.policyNumber ?? "").trim() ||
+    "N/A";
+  const coverageAmount = formatMoney(
+    params.policy?.faceAmount ??
+      leadVars.faceAmount ??
+      leadVars.coverageAmount,
+  );
+  const monthlyPremium = formatMoney(
+    params.policy?.premium ??
+      params.client.premiumAmount ??
+      leadVars.premium ??
+      leadVars.monthlyPremium,
+  );
+  const draftDate = params.policy?.paymentDraftDate
+    ? new Date(params.policy.paymentDraftDate).toLocaleDateString("en-US")
+    : ((leadVars.draftDate ?? "").trim() || "N/A");
   const carrierFromForm = (leadVars.carrierQuoted ?? "").trim();
   const carrierName = carrierFromForm || params.policy?.carrier || params.client.carrier || "N/A";
   const message = renderTemplate(template, {
