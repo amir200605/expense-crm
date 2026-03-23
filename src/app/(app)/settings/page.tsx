@@ -75,6 +75,13 @@ interface LeadPreviewDetail {
   rawPayload?: Record<string, unknown> | null;
 }
 
+interface TeamPreviewMember {
+  id: string;
+  name?: string | null;
+  avatarUrl?: string | null;
+  cardImageUrl?: string | null;
+}
+
 async function fetchSettings(): Promise<{ agency: AgencySettings; integrationsMeta?: IntegrationsMeta }> {
   const res = await fetch("/api/settings");
   if (!res.ok) throw new Error("Failed to load settings");
@@ -96,6 +103,12 @@ async function fetchPreviewLeads(): Promise<{ items: LeadPreviewListItem[] }> {
 async function fetchLeadPreviewDetail(leadId: string): Promise<LeadPreviewDetail> {
   const res = await fetch(`/api/leads/${leadId}`);
   if (!res.ok) throw new Error("Failed to load selected lead");
+  return res.json();
+}
+
+async function fetchTeamPreview(): Promise<{ members: TeamPreviewMember[] }> {
+  const res = await fetch("/api/team");
+  if (!res.ok) return { members: [] };
   return res.json();
 }
 
@@ -350,6 +363,12 @@ export default function SettingsPage() {
     enabled: !isAgent && Boolean(selectedPreviewLeadId),
     staleTime: 30_000,
   });
+  const { data: teamPreviewData } = useQuery({
+    queryKey: ["team-preview-media"],
+    queryFn: fetchTeamPreview,
+    enabled: !isAgent,
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
     if (data?.agency) {
@@ -566,6 +585,19 @@ export default function SettingsPage() {
     if (!template) return "";
     return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key) => vars[key] ?? "");
   }, [selectedPreviewLead, welcomeSmsTemplate, sessionData]);
+
+  const previewMmsImageUrl = useMemo(() => {
+    const sessionUserId = (sessionData?.user as { id?: string } | undefined)?.id;
+    if (!sessionUserId) return "";
+    const sender = (teamPreviewData?.members ?? []).find((m) => m.id === sessionUserId);
+    const raw = sender?.cardImageUrl?.trim() || sender?.avatarUrl?.trim() || "";
+    if (!raw) return "";
+    if (raw.startsWith("http")) return raw;
+    if (raw.startsWith("/") && typeof window !== "undefined") {
+      return `${window.location.origin}${raw}`;
+    }
+    return raw;
+  }, [sessionData, teamPreviewData]);
 
   if (isAgent) {
     return (
@@ -874,7 +906,7 @@ export default function SettingsPage() {
                     className="h-8 text-xs"
                   />
                 </div>
-                <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                <div className="space-y-3 pr-1">
                   {filteredVariableGroups.length === 0 ? (
                     <p className="text-xs text-muted-foreground">No variables found.</p>
                   ) : (
@@ -934,6 +966,21 @@ export default function SettingsPage() {
                       : previewLeadLoading
                         ? "Loading preview..."
                         : previewMessage || "Preview is empty."}
+                </div>
+                <div className="rounded-md border border-border/70 bg-background p-3 space-y-2">
+                  <p className="text-xs font-medium text-foreground">MMS image preview</p>
+                  {previewMmsImageUrl ? (
+                    // Mirrors what sender image is used for MMS (card image first, then avatar).
+                    <img
+                      src={previewMmsImageUrl}
+                      alt="Agent MMS card preview"
+                      className="max-h-64 w-auto rounded-md border border-border/60 object-contain"
+                    />
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      No agent image found. Upload a team photo/card on Team page to include image in MMS.
+                    </p>
+                  )}
                 </div>
               </div>
               {templateMutation.isError && (

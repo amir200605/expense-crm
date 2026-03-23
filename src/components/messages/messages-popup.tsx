@@ -60,9 +60,12 @@ async function fetchChat(id: string): Promise<{ chat: Chat }> {
 export function MessagesPopup({
   open,
   onOpenChange,
+  /** Set false to hide the floating circle button (use sidebar “Messages” only). */
+  showFloatingTrigger = true,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  showFloatingTrigger?: boolean;
 }) {
   const qc = useQueryClient();
   const [view, setView] = useState<"list" | "chat">("list");
@@ -156,27 +159,31 @@ export function MessagesPopup({
         ? `${chat.userA.name ?? chat.userA.email} · ${chat.userB.name ?? chat.userB.email}`
         : "Conversation";
 
+  const panelCorner = showFloatingTrigger ? "bottom-24 right-24" : "bottom-6 right-6";
+
   return (
     <>
-      {/* Floating trigger button - same style as AI, to the left of it */}
-      <button
-        type="button"
-        onClick={() => handleClose(!open)}
-        className={cn(
-          "fixed bottom-6 right-24 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-105",
-          open
-            ? "bg-foreground text-background"
-            : "bg-primary text-primary-foreground"
-        )}
-        aria-label="Team messages"
-      >
-        {open ? <X className="h-5 w-5" /> : <MessagesSquare className="h-5 w-5" />}
-      </button>
+      {showFloatingTrigger && (
+        <button
+          type="button"
+          onClick={() => handleClose(!open)}
+          className={cn(
+            "fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-105",
+            open
+              ? "bg-foreground text-background"
+              : "bg-primary text-primary-foreground"
+          )}
+          aria-label="Team messages"
+        >
+          {open ? <X className="h-5 w-5" /> : <MessagesSquare className="h-5 w-5" />}
+        </button>
+      )}
 
       {/* Floating panel - same layout as AI panel */}
       <div
         className={cn(
-          "fixed bottom-24 right-24 z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl transition-all duration-300",
+          "fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl transition-all duration-300",
+          panelCorner,
           open
             ? "h-[520px] w-[380px] opacity-100 translate-y-0"
             : "h-0 w-[380px] opacity-0 translate-y-4 pointer-events-none"
