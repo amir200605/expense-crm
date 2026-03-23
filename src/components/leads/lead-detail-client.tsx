@@ -131,7 +131,7 @@ export function LeadDetailClient({
   });
 
   const { data: teamData } = useQuery({
-    queryKey: ["team"],
+    queryKey: ["assignable-team"],
     queryFn: fetchTeam,
     staleTime: TEAM_STALE_MS,
   });

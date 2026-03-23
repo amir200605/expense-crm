@@ -114,7 +114,7 @@ export default function LeadsPage() {
   });
 
   const { data: teamData } = useQuery({
-    queryKey: ["team"],
+    queryKey: ["assignable-team"],
     queryFn: fetchTeam,
     staleTime: 5 * 60_000,
   });

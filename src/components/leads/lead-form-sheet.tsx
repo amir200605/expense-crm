@@ -255,7 +255,7 @@ export function LeadFormSheet({
   }, [open, leadId, leadEditData, form, defaultLeadValues]);
 
   const { data: teamData } = useQuery({
-    queryKey: ["team"],
+    queryKey: ["assignable-team"],
     queryFn: fetchTeam,
     staleTime: 60_000,
   });
