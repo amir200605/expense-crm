@@ -143,7 +143,10 @@ export function LeadDetailClient({
   const convertMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/leads/${leadId}/convert`, { method: "POST" });
-      if (!res.ok) throw new Error("Convert failed");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { error?: string; code?: string };
+        throw new Error(err.error ?? "Convert failed");
+      }
       return res.json();
     },
     onSuccess: (data) => {
@@ -242,6 +245,9 @@ export function LeadDetailClient({
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
             </Button>
+          )}
+          {convertMutation.isError && (
+            <p className="w-full text-sm text-destructive">{convertMutation.error.message}</p>
           )}
         </div>
       </div>
