@@ -90,7 +90,8 @@ export async function buildAgentCardPngBuffer(opts: {
   const npnTrim = (opts.npnNumber ?? "").trim();
   const displayNpn = escapeXml(npnTrim || EMPTY_DASH);
   const displayPhone = escapeXml(formatPhoneDisplay(opts.phone));
-  const licensedSubtitle = "LICENSED LIFE & HEALTH INSURANCE AGENT";
+  const licensedSubtitleRaw = "LICENSED LIFE & HEALTH INSURANCE AGENT";
+  const licensedSubtitle = escapeXml(licensedSubtitleRaw);
 
   const textLeft = 176;
   const textWidth = CARD_W - textLeft - 24;

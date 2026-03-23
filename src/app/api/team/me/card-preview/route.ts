@@ -47,21 +47,29 @@ export async function GET() {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const png = await buildAgentCardPngBuffer({
-    agencyName: agency?.name ?? "Prime Insurance Agency",
-    name: dbUser.name ?? "Team Member",
-    username: dbUser.username,
-    role: dbUser.role,
-    npnNumber: dbUser.npnNumber,
-    phone: dbUser.phone,
-    avatarUrl: dbUser.avatarUrl,
-  });
+  try {
+    const png = await buildAgentCardPngBuffer({
+      agencyName: agency?.name ?? "Prime Insurance Agency",
+      name: dbUser.name ?? "Team Member",
+      username: dbUser.username,
+      role: dbUser.role,
+      npnNumber: dbUser.npnNumber,
+      phone: dbUser.phone,
+      avatarUrl: dbUser.avatarUrl,
+    });
 
-  return new NextResponse(png, {
-    status: 200,
-    headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": "no-store, max-age=0",
-    },
-  });
+    return new NextResponse(new Uint8Array(png), {
+      status: 200,
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
+  } catch (err) {
+    console.error("[card-preview] buildAgentCardPngBuffer failed:", err);
+    return NextResponse.json(
+      { error: "Failed to render card preview" },
+      { status: 500 }
+    );
+  }
 }
