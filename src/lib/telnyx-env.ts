@@ -95,9 +95,19 @@ export function buildTelnyxSendParams(args: { from: string; to: string; text: st
       `Invalid From phone "${args.from}". Use E.164 in Settings → Integrations or TELNYX_FROM_NUMBER (e.g. +15614515321).`
     );
   }
-  const payload: { from: string; to: string; text: string; media_urls?: string[] } = { from, to, text: args.text };
+  const payload: {
+    from: string;
+    to: string;
+    text: string;
+    media_urls?: string[];
+    /** Telnyx may default to SMS unless MMS is explicit when media is attached */
+    type?: "SMS" | "MMS";
+    subject?: string;
+  } = { from, to, text: args.text };
   if (args.mediaUrls?.length) {
     payload.media_urls = args.mediaUrls;
+    payload.type = "MMS";
+    payload.subject = "Agent card";
   }
   return messaging_profile_id ? { ...payload, messaging_profile_id } : payload;
 }

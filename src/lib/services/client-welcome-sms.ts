@@ -238,6 +238,7 @@ export async function sendClientWelcomeSms(params: {
   if (params.agentCardImageUrl?.trim()) {
     mediaUrls.push(params.agentCardImageUrl.trim());
   }
+
   const message = renderTemplate(template, {
     ...leadVars,
     clientName,
@@ -273,9 +274,18 @@ export async function sendClientWelcomeSms(params: {
   }
 
   try {
-    await telnyx.messages.send(
-      sendParams as Parameters<typeof telnyx.messages.send>[0],
-    );
+    if (mediaUrls.length > 0) {
+      try {
+        await telnyx.messages.sendLongCode(
+          sendParams as Parameters<typeof telnyx.messages.sendLongCode>[0],
+        );
+      } catch (longCodeErr) {
+        console.warn("[welcome-sms] sendLongCode failed, falling back to messages.send:", longCodeErr);
+        await telnyx.messages.send(sendParams as Parameters<typeof telnyx.messages.send>[0]);
+      }
+    } else {
+      await telnyx.messages.send(sendParams as Parameters<typeof telnyx.messages.send>[0]);
+    }
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
     await logWelcomeSmsOnLead({
