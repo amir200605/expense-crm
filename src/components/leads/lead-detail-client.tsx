@@ -68,7 +68,7 @@ export type LeadDetail = {
 };
 
 async function fetchTeam(): Promise<{ members: TeamMember[] }> {
-  const res = await fetch("/api/team");
+  const res = await fetch("/api/team/assignable");
   if (!res.ok) return { members: [] };
   return res.json();
 }
