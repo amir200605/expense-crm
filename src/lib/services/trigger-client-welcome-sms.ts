@@ -7,7 +7,8 @@ import { sendClientWelcomeSms } from "@/lib/services/client-welcome-sms";
  */
 export async function runClientWelcomeSmsAfterCreate(params: {
   agencyId: string;
-    client: {
+  appBaseUrl?: string | null;
+  client: {
     id: string;
     firstName: string;
     lastName: string;
@@ -32,6 +33,17 @@ export async function runClientWelcomeSmsAfterCreate(params: {
         paymentDraftDate: true,
       },
     });
+    const sender = params.userId
+      ? await prisma.user.findUnique({
+          where: { id: params.userId },
+          select: { cardImageUrl: true },
+        })
+      : null;
+    const rawCardUrl = sender?.cardImageUrl?.trim() ?? "";
+    const agentCardImageUrl =
+      rawCardUrl && rawCardUrl.startsWith("/")
+        ? (params.appBaseUrl ? `${params.appBaseUrl}${rawCardUrl}` : null)
+        : rawCardUrl || null;
     await sendClientWelcomeSms({
       agencyId: params.agencyId,
       client: {
@@ -43,6 +55,7 @@ export async function runClientWelcomeSmsAfterCreate(params: {
       },
       policy: latestPolicy,
       agentName: params.userName ?? params.userEmail ?? "your life insurance agent",
+      agentCardImageUrl,
       logToLead: params.linkedLeadId
         ? { leadId: params.linkedLeadId, userId: params.userId ?? null }
         : undefined,

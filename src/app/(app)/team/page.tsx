@@ -30,6 +30,7 @@ interface Member {
   role: string;
   username: string | null;
   avatarUrl: string | null;
+  cardImageUrl: string | null;
   phone: string | null;
   npnNumber: string | null;
 }
@@ -113,6 +114,39 @@ export default function TeamPage() {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error ?? "Failed to remove photo");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team"] });
+    },
+  });
+
+  const uploadCardMutation = useMutation({
+    mutationFn: async ({ id, file }: { id: string; file: File }) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/team/${id}/card`, {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Failed to upload card image");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team"] });
+    },
+  });
+
+  const removeCardMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/team/${id}/card`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Failed to remove card image");
       }
       return res.json();
     },
@@ -296,6 +330,40 @@ export default function TeamPage() {
                       Remove photo
                     </Button>
                   )}
+                  <input
+                    id="agent-card-upload-input"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !editMember) return;
+                      uploadCardMutation.mutate({ id: editMember.id, file });
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      document.getElementById("agent-card-upload-input")?.click()
+                    }
+                    disabled={uploadCardMutation.isPending}
+                  >
+                    {uploadCardMutation.isPending ? "Uploading card..." : editMember.cardImageUrl ? "Replace agent card" : "Upload agent card"}
+                  </Button>
+                  {editMember.cardImageUrl && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => removeCardMutation.mutate(editMember.id)}
+                      disabled={removeCardMutation.isPending}
+                    >
+                      Remove agent card
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -338,6 +406,17 @@ export default function TeamPage() {
             )}
             {removeAvatarMutation.isError && (
               <p className="text-sm text-destructive">{removeAvatarMutation.error.message}</p>
+            )}
+            {uploadCardMutation.isError && (
+              <p className="text-sm text-destructive">{uploadCardMutation.error.message}</p>
+            )}
+            {removeCardMutation.isError && (
+              <p className="text-sm text-destructive">{removeCardMutation.error.message}</p>
+            )}
+            {editMember?.cardImageUrl && (
+              <p className="text-xs text-muted-foreground">
+                Agent card image is set and will be attached to welcome MMS.
+              </p>
             )}
             {saveMsg && <p className="text-sm text-emerald-600">{saveMsg}</p>}
           </div>

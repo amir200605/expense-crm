@@ -31,6 +31,7 @@ export async function GET() {
       role: true,
       username: true,
       avatarUrl: true,
+      cardImageUrl: true,
       phone: true,
       npnNumber: true,
     },

@@ -118,6 +118,7 @@ export async function sendClientWelcomeSms(params: {
   client: ClientLike;
   policy?: PolicyLike;
   agentName: string;
+  agentCardImageUrl?: string | null;
   /** When the client was created from a lead, log the SMS on that lead’s communications. */
   logToLead?: { leadId: string; userId: string | null };
 }) {
@@ -228,6 +229,10 @@ export async function sendClientWelcomeSms(params: {
     : ((leadVars.draftDate ?? "").trim() || "N/A");
   const carrierFromForm = (leadVars.carrierQuoted ?? "").trim();
   const carrierName = carrierFromForm || params.policy?.carrier || params.client.carrier || "N/A";
+  const mediaUrls: string[] = [];
+  if (params.agentCardImageUrl?.trim()) {
+    mediaUrls.push(params.agentCardImageUrl.trim());
+  }
   const message = renderTemplate(template, {
     ...leadVars,
     clientName,
@@ -248,6 +253,7 @@ export async function sendClientWelcomeSms(params: {
       from: fromNumber,
       to: phone,
       text: message,
+      mediaUrls,
     }) as ReturnType<typeof buildTelnyxSendParams>;
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);

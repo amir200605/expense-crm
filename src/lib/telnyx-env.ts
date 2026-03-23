@@ -81,7 +81,7 @@ export function getTelnyxMessagingProfileId(): string | undefined {
 }
 
 /** Shared payload for `telnyx.messages.send` — normalizes from/to to E.164 (Telnyx requirement). */
-export function buildTelnyxSendParams(args: { from: string; to: string; text: string }) {
+export function buildTelnyxSendParams(args: { from: string; to: string; text: string; mediaUrls?: string[] }) {
   const messaging_profile_id = getTelnyxMessagingProfileId();
   const to = normalizePhoneToE164(args.to);
   if (!to) {
@@ -95,8 +95,9 @@ export function buildTelnyxSendParams(args: { from: string; to: string; text: st
       `Invalid From phone "${args.from}". Use E.164 in Settings → Integrations or TELNYX_FROM_NUMBER (e.g. +15614515321).`
     );
   }
-  const payload = { from, to, text: args.text };
-  return messaging_profile_id
-    ? { ...payload, messaging_profile_id }
-    : payload;
+  const payload: { from: string; to: string; text: string; media_urls?: string[] } = { from, to, text: args.text };
+  if (args.mediaUrls?.length) {
+    payload.media_urls = args.mediaUrls;
+  }
+  return messaging_profile_id ? { ...payload, messaging_profile_id } : payload;
 }

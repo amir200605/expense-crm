@@ -27,6 +27,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const appBaseUrl = new URL(req.url).origin;
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = session.user as SessionUser;
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
 
     await runClientWelcomeSmsAfterCreate({
       agencyId,
+      appBaseUrl,
       client: {
         id: client.id,
         firstName: client.firstName,

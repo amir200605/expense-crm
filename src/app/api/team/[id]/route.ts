@@ -14,6 +14,7 @@ const updateSchema = z.object({
   username: z.string().min(1).optional(),
   phone: z.string().trim().optional().nullable(),
   npnNumber: z.string().trim().optional().nullable(),
+  cardImageUrl: z.string().trim().optional().nullable(),
 });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -48,7 +49,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const updated = await prisma.user.update({
     where: { id },
     data: parsed.data,
-    select: { id: true, name: true, email: true, role: true, username: true, avatarUrl: true, phone: true, npnNumber: true },
+    select: { id: true, name: true, email: true, role: true, username: true, avatarUrl: true, cardImageUrl: true, phone: true, npnNumber: true },
   });
 
   return NextResponse.json({ user: updated });

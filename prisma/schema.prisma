@@ -207,6 +207,7 @@ model User {
   phone         String?
   npnNumber     String?
   avatarUrl     String?
+  cardImageUrl  String?
   role          Role      @default(AGENT)
   agencyId      String?
   createdAt     DateTime  @default(now())

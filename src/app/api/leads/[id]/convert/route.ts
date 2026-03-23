@@ -9,9 +9,10 @@ import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
 
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: leadId } = await params;
   try {
+    const appBaseUrl = new URL(req.url).origin;
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const lead = await getLeadById(leadId);
@@ -39,6 +40,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       if (existingClient) {
         await runClientWelcomeSmsAfterCreate({
           agencyId: existingClient.agencyId,
+          appBaseUrl,
           client: {
             id: existingClient.id,
             firstName: existingClient.firstName,
@@ -73,6 +75,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     await runClientWelcomeSmsAfterCreate({
       agencyId: lead.agencyId,
+      appBaseUrl,
       client: {
         id: client.id,
         firstName: client.firstName,

@@ -23,3 +23,5 @@ generated/
 # Uploaded team avatars (keep folder via .gitkeep)
 public/uploads/avatars/*
 !public/uploads/avatars/.gitkeep
+public/uploads/agent-cards/*
+!public/uploads/agent-cards/.gitkeep
