@@ -7,6 +7,18 @@ function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "").slice(-10);
 }
 
+function parseOptionalInt(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
+
+function parseOptionalNumber(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 export async function findDuplicateLeads(agencyId: string, data: { phone: string; email?: string; firstName: string; lastName: string; dateOfBirth?: string }) {
   const phoneNorm = normalizePhone(data.phone);
   const conditions: Prisma.LeadWhereInput[] = [];
@@ -51,7 +63,7 @@ export async function createLead(agencyId: string, input: CreateLeadInput, rawPa
       data: { duplicateGroupId },
     });
   }
-  const fullName = [input.firstName, input.lastName].filter(Boolean).join(" ");
+  const fullName = input.fullName?.trim() || [input.firstName, input.lastName].filter(Boolean).join(" ");
   const dateOfBirth = parseOptionalDateString(input.dateOfBirth);
   const lead = await prisma.lead.create({
     data: {
@@ -61,6 +73,7 @@ export async function createLead(agencyId: string, input: CreateLeadInput, rawPa
       fullName,
       phone: input.phone,
       email: input.email || null,
+      age: parseOptionalInt(input.age),
       source: input.source ?? null,
       vendor: input.vendor ?? null,
       campaign: input.campaign ?? null,
@@ -74,12 +87,12 @@ export async function createLead(agencyId: string, input: CreateLeadInput, rawPa
       zip: input.zip ?? null,
       county: input.county ?? null,
       smokerStatus: input.smokerStatus ?? null,
-      coverageAmountInterest: input.coverageAmountInterest ?? null,
+      coverageAmountInterest: parseOptionalNumber(input.coverageAmountInterest),
       beneficiaryName: input.beneficiaryName ?? null,
       preferredLanguage: input.preferredLanguage ?? null,
       bestCallTime: input.bestCallTime ?? null,
-      leadCost: input.leadCost ?? null,
-      leadScore: input.leadScore ?? null,
+      leadCost: parseOptionalNumber(input.leadCost),
+      leadScore: parseOptionalInt(input.leadScore),
       consentStatus: input.consentStatus ?? null,
       doNotCall: input.doNotCall ?? false,
       assignedAgentId: optionalStringId(input.assignedAgentId),

@@ -35,7 +35,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error: "No agency",
-          hint: "Create an agency and user (e.g. npm run db:seed) or POST /api/auth/ensure-demo-user, then sign in again.",
+          hint: "Create an agency and user (e.g. npm run db:seed), then sign in again.",
         },
         { status: 403 }
       );

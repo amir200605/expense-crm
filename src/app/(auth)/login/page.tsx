@@ -25,31 +25,12 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resetting, setResetting] = useState(false);
 
   // When NextAuth redirects with ?error=, show our message (never "email and password")
   useEffect(() => {
     const err = searchParams.get("error");
     if (err) setError(LOGIN_ERROR_MSG);
   }, [searchParams]);
-
-  async function onEnsureDemo() {
-    setError("");
-    setResetting(true);
-    try {
-      const res = await fetch("/api/auth/ensure-demo-user", { method: "POST" });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setError("");
-        setUsername("admin");
-        setPassword("admin123");
-      } else {
-        setError(data.error || "Reset failed. Stop the dev server, run: npx prisma generate, then npm run dev");
-      }
-    } finally {
-      setResetting(false);
-    }
-  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -80,9 +61,6 @@ function LoginForm() {
           {error && (
             <div className="space-y-2">
               <p className="text-sm text-destructive">{error}</p>
-              <Button type="button" variant="outline" size="sm" onClick={onEnsureDemo} disabled={resetting}>
-                {resetting ? "Resetting…" : "Create admin user (admin / admin123)"}
-              </Button>
             </div>
           )}
           <div className="space-y-2">
@@ -90,7 +68,7 @@ function LoginForm() {
             <Input
               id="username"
               type="text"
-              placeholder="admin"
+              placeholder="Enter your username"
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -102,7 +80,7 @@ function LoginForm() {
             <Input
               id="password"
               type="password"
-              placeholder="admin123"
+              placeholder="Enter your password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
