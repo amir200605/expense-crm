@@ -77,6 +77,15 @@ function renderTemplate(template: string, vars: Record<string, string>): string 
   return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key) => vars[key] ?? "");
 }
 
+function toStringValue(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "object") {
+    if (v instanceof Date) return v.toISOString();
+    if ("toString" in v) return String((v as { toString: () => string }).toString());
+  }
+  return String(v);
+}
+
 async function logWelcomeSmsOnLead(params: {
   logToLead?: { leadId: string; userId: string | null };
   to: string | null;
@@ -167,6 +176,45 @@ export async function sendClientWelcomeSms(params: {
     : "N/A";
 
   const template = (settings.templates as { welcomeSms?: string } | undefined)?.welcomeSms?.trim() || DEFAULT_WELCOME_SMS_TEMPLATE;
+  const lead = params.logToLead?.leadId
+    ? await prisma.lead.findUnique({
+        where: { id: params.logToLead.leadId },
+        select: {
+          firstName: true,
+          lastName: true,
+          fullName: true,
+          phone: true,
+          email: true,
+          city: true,
+          state: true,
+          zip: true,
+          disposition: true,
+          pipelineStage: true,
+          source: true,
+          notes: true,
+          rawPayload: true,
+        },
+      })
+    : null;
+  const leadRaw = (lead?.rawPayload as Record<string, unknown> | null) ?? {};
+  const leadVars: Record<string, string> = {};
+  for (const [k, v] of Object.entries(leadRaw)) {
+    leadVars[k] = toStringValue(v);
+  }
+  if (lead) {
+    leadVars.leadFirstName = lead.firstName ?? "";
+    leadVars.leadLastName = lead.lastName ?? "";
+    leadVars.leadFullName = lead.fullName ?? `${lead.firstName ?? ""} ${lead.lastName ?? ""}`.trim();
+    leadVars.leadPhone = lead.phone ?? "";
+    leadVars.leadEmail = lead.email ?? "";
+    leadVars.leadCity = lead.city ?? "";
+    leadVars.leadState = lead.state ?? "";
+    leadVars.leadZip = lead.zip ?? "";
+    leadVars.leadDisposition = lead.disposition ?? "";
+    leadVars.leadPipelineStage = lead.pipelineStage ?? "";
+    leadVars.leadSource = lead.source ?? "";
+    if (!leadVars.notes) leadVars.notes = lead.notes ?? "";
+  }
   const message = renderTemplate(template, {
     clientName,
     agentName: params.agentName,
@@ -177,6 +225,7 @@ export async function sendClientWelcomeSms(params: {
     draftDate,
     carrierServiceNumber: getCarrierServiceNumber(carrierName),
     officeNumber: DEFAULT_OFFICE_NUMBER,
+    ...leadVars,
   });
 
   const telnyx = new Telnyx({ apiKey });

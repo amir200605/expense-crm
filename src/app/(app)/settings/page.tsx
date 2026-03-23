@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -290,6 +290,7 @@ export default function SettingsPage() {
   const [testSmsResult, setTestSmsResult] = useState<{ ok: boolean; message?: string } | null>(null);
   const [welcomeSmsTemplate, setWelcomeSmsTemplate] = useState("");
   const [templateSaved, setTemplateSaved] = useState(false);
+  const templateRef = useRef<HTMLTextAreaElement | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["settings"],
@@ -407,6 +408,41 @@ export default function SettingsPage() {
   function handleTemplateSubmit(e: React.FormEvent) {
     e.preventDefault();
     templateMutation.mutate(welcomeSmsTemplate);
+  }
+
+  const templateVariables = [
+    "clientName", "agentName", "carrierName", "policyNumber", "coverageAmount", "monthlyPremium", "draftDate", "carrierServiceNumber", "officeNumber",
+    "leadFirstName", "leadLastName", "leadFullName", "leadPhone", "leadEmail", "leadCity", "leadState", "leadZip", "leadDisposition", "leadPipelineStage", "leadSource",
+    "fullName", "phone", "phone2", "dateOfBirth", "age", "gender", "maritalStatus", "address", "city", "state", "zip", "county", "timeZone",
+    "preferredContactMethod", "bestTimeToCall", "vendor", "campaign", "leadCost", "dateLeadReceived", "leadType", "leadFreshness", "spouseName",
+    "beneficiaryName", "beneficiaryRelation", "beneficiaryPhone", "emergencyContact", "childrenYesNo", "grandchildrenYesNo", "decisionMakerNotes",
+    "coverageAmountInterest", "budgetMonthlyPremiumTarget", "burialOrCremationPreference", "existingLifeInsuranceYesNo", "existingPolicyAmount",
+    "concernReasonForBuying", "wantsFuneralPlanningHelpYesNo", "preferredPaymentMode", "height", "weight", "tobaccoStatus", "prescriptionMedications",
+    "majorConditions", "hospitalizationsLast2Years", "cancerHistory", "heartHistory", "diabetes", "copdOxygenUse", "strokeHistory", "kidneyDisease",
+    "mobilityIssues", "mentalCapacityConcerns", "nursingHomeAssistedLivingStatus", "recentSurgeries", "underwritingClassEstimatedEligibility",
+    "knockoutConditionYesNo", "bankName", "routingNumber", "accountNumber", "socialSecurityOrLast4", "incomeSource", "beneficiaryPayorIfDifferent",
+    "paymentMethod", "replacementInvolvedYesNo", "carrierQuoted", "planProduct", "faceAmount", "premium", "applicationDate", "applicationStatus",
+    "writingAgent", "splitAgent", "effectiveDate", "approvalDate", "declineReason", "chargebackRisk", "persistencyNotes", "notes",
+  ] as const;
+
+  function insertTemplateVariable(variable: string) {
+    const token = `{{${variable}}}`;
+    const el = templateRef.current;
+    if (!el) {
+      setWelcomeSmsTemplate((prev) => `${prev}${prev ? " " : ""}${token}`);
+      return;
+    }
+    const start = el.selectionStart ?? welcomeSmsTemplate.length;
+    const end = el.selectionEnd ?? start;
+    const before = welcomeSmsTemplate.slice(0, start);
+    const after = welcomeSmsTemplate.slice(end);
+    const next = `${before}${token}${after}`;
+    setWelcomeSmsTemplate(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + token.length;
+      el.setSelectionRange(pos, pos);
+    });
   }
 
   if (isAgent) {
@@ -699,6 +735,7 @@ export default function SettingsPage() {
                 <Textarea
                   id="welcome-sms-template"
                   rows={12}
+                  ref={templateRef}
                   value={welcomeSmsTemplate}
                   onChange={(e) => setWelcomeSmsTemplate(e.target.value)}
                   placeholder="Hi {{clientName}}, this is {{agentName}}..."
@@ -707,9 +744,20 @@ export default function SettingsPage() {
               </div>
               <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
                 <p className="font-medium text-foreground">Available variables</p>
-                <p>
-                  {`{{clientName}}, {{agentName}}, {{carrierName}}, {{policyNumber}}, {{coverageAmount}}, {{monthlyPremium}}, {{draftDate}}, {{carrierServiceNumber}}, {{officeNumber}}`}
-                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {templateVariables.map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      className="rounded-md border border-border/70 bg-background px-2 py-1 text-[11px] text-foreground hover:bg-accent"
+                      onClick={() => insertTemplateVariable(v)}
+                      disabled={!canEdit}
+                      title={`Insert {{${v}}}`}
+                    >
+                      {`{{${v}}}`}
+                    </button>
+                  ))}
+                </div>
               </div>
               {templateMutation.isError && (
                 <p className="text-sm text-destructive">{templateMutation.error.message}</p>
