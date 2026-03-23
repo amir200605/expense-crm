@@ -4,6 +4,8 @@ import sharp from "sharp";
 
 const CARD_W = 600;
 const CARD_H = 280;
+/** Blue header bar height (logo + centered agency title) */
+const HEADER_H = 60;
 /** Matches invite preview / brand teal */
 const HEADER_FILL = "#5f82b3";
 const BODY_FILL = "#fafafa";
@@ -97,6 +99,13 @@ export async function buildAgentCardPngBuffer(opts: {
   const textWidth = CARD_W - textLeft - 24;
   const headerTopFs = headerFontSize(headerTextTop.length, CARD_W - 220) + 5;
   const headerBottomFs = 18;
+  const headerCx = CARD_W / 2;
+  /** Sit shield toward the top of the bar; agency title stays centered */
+  const logoDy = 2;
+  /** Baselines for centered agency block (fits within HEADER_H) */
+  const yHeaderTop = 24;
+  const yHeaderDivider = 32;
+  const yHeaderAgency = 48;
   const nameFs = fontSizeForLine(nameRaw.length, textWidth, 36, 20);
   const subtitleFs = Math.round(Math.min(14, Math.max(10, nameFs * 0.34)));
   const detailFs = Math.round(Math.min(18, Math.max(13, nameFs * 0.48)));
@@ -139,10 +148,10 @@ export async function buildAgentCardPngBuffer(opts: {
     <line x1="20" y1="33" x2="20" y2="39" stroke="#d8e2f1" stroke-width="1.6"/>
     <line x1="32" y1="33" x2="32" y2="39" stroke="#d8e2f1" stroke-width="1.6"/>
   </g>
-  <text x="230" y="26" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${headerTopFs}" font-weight="700" letter-spacing="0.08em" fill="#0b1d35">${headerTextTop}</text>
-  <line x1="96" y1="31" x2="365" y2="31" stroke="#0b1d35" stroke-width="1.6"/>
-  <text x="230" y="51" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${headerBottomFs}" font-weight="700" letter-spacing="0.08em" fill="#0b1d35">${headerTextBottom}</text>
-  <rect x="0" y="60" width="${CARD_W}" height="${CARD_H - 60}" fill="${BODY_FILL}" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="${headerCx}" y="${yHeaderTop}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${headerTopFs}" font-weight="700" letter-spacing="0.08em" fill="#0b1d35">${headerTextTop}</text>
+  <line x1="${headerCx - 140}" y1="${yHeaderDivider}" x2="${headerCx + 140}" y2="${yHeaderDivider}" stroke="#0b1d35" stroke-width="1.6"/>
+  <text x="${headerCx}" y="${yHeaderAgency}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${headerBottomFs}" font-weight="700" letter-spacing="0.08em" fill="#0b1d35">${headerTextBottom}</text>
+  <rect x="0" y="${HEADER_H}" width="${CARD_W}" height="${CARD_H - HEADER_H}" fill="${BODY_FILL}" stroke="#e2e8f0" stroke-width="1"/>
   ${avatarBlock}
   <text x="${textLeft}" y="${yName}" font-family="Arial, Helvetica, sans-serif" font-size="${nameFs}" font-weight="700" fill="${TEXT_NAME}" letter-spacing="0.03em">${displayName}</text>
   <text x="${textLeft}" y="${ySubtitle}" font-family="Arial, Helvetica, sans-serif" font-size="${subtitleFs}" font-weight="600" fill="${TEXT_MUTED}" letter-spacing="0.04em">${licensedSubtitle}</text>
