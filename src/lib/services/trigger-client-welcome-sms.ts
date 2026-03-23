@@ -43,13 +43,15 @@ export async function runClientWelcomeSmsAfterCreate(params: {
       try {
         const sender = await prisma.user.findUnique({
           where: { id: params.userId },
-          select: { cardImageUrl: true },
+          select: { cardImageUrl: true, avatarUrl: true },
         });
         const rawCardUrl = sender?.cardImageUrl?.trim() ?? "";
+        const rawAvatarUrl = sender?.avatarUrl?.trim() ?? "";
+        const preferredImageUrl = rawCardUrl || rawAvatarUrl;
         agentCardImageUrl =
-          rawCardUrl && rawCardUrl.startsWith("/")
-            ? (params.appBaseUrl ? `${params.appBaseUrl}${rawCardUrl}` : null)
-            : rawCardUrl || null;
+          preferredImageUrl && preferredImageUrl.startsWith("/")
+            ? (params.appBaseUrl ? `${params.appBaseUrl}${preferredImageUrl}` : null)
+            : preferredImageUrl || null;
       } catch (cardErr) {
         console.warn("[welcome-sms] could not load agent card image (run migration or ignore):", cardErr);
       }
