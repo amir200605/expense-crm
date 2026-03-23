@@ -86,7 +86,8 @@ export async function buildAgentCardPngBuffer(opts: {
   phone: string | null;
   avatarUrl: string | null;
 }): Promise<Buffer> {
-  const headerText = escapeXml(opts.agencyName.trim() || "Prime Insurance Agency").toUpperCase();
+  // Product requirement: keep card title consistent across all previews/messages.
+  const headerText = "PRIME INSURANCE AGENCY";
   const nameRaw = (opts.name.trim() || "TEAM MEMBER").toUpperCase();
   const displayName = escapeXml(nameRaw);
   const npnTrim = (opts.npnNumber ?? "").trim();

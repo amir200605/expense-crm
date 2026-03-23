@@ -115,6 +115,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     phone: true,
   } as const;
 
+  function withoutKeys<T extends Record<string, unknown>>(obj: T, keys: string[]) {
+    const next: Record<string, unknown> = { ...obj };
+    for (const k of keys) delete next[k];
+    return next;
+  }
+
   try {
     const updated = await prisma.user.update({
       where: { id },
@@ -133,24 +139,46 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
       // DB missing newer columns (migration not applied)
       if (e.code === "P2022") {
-        const { cardImageUrl: _c, npnNumber: _n, ...dataWithoutCard } = parsed.data as Record<string, unknown>;
+        const missingCol = String(e.meta?.column ?? "");
+        const drop: string[] = [];
+        if (missingCol.includes("cardImageUrl")) drop.push("cardImageUrl");
+        if (missingCol.includes("npnNumber")) drop.push("npnNumber");
+        if (drop.length === 0) drop.push("cardImageUrl");
+        const dataFallback = withoutKeys(parsed.data as Record<string, unknown>, drop);
         const updated = await prisma.user.update({
           where: { id },
-          data: dataWithoutCard,
+          data: dataFallback,
           select: selectLegacy,
         });
-        return NextResponse.json({ user: { ...updated, cardImageUrl: null, npnNumber: null } });
+        return NextResponse.json({
+          user: {
+            ...updated,
+            cardImageUrl: drop.includes("cardImageUrl") ? null : (parsed.data.cardImageUrl ?? null),
+            npnNumber: drop.includes("npnNumber") ? null : (parsed.data.npnNumber ?? null),
+          },
+        });
       }
     }
     if (e instanceof Prisma.PrismaClientValidationError) {
       // Prisma client may be older than schema (unknown args/fields)
-      const { cardImageUrl: _c, npnNumber: _n, ...dataLegacy } = parsed.data as Record<string, unknown>;
+      const msg = String(e.message ?? "");
+      const drop: string[] = [];
+      if (msg.includes("cardImageUrl")) drop.push("cardImageUrl");
+      if (msg.includes("npnNumber")) drop.push("npnNumber");
+      if (drop.length === 0) drop.push("cardImageUrl");
+      const dataLegacy = withoutKeys(parsed.data as Record<string, unknown>, drop);
       const updated = await prisma.user.update({
         where: { id },
         data: dataLegacy,
         select: selectLegacy,
       });
-      return NextResponse.json({ user: { ...updated, cardImageUrl: null, npnNumber: null } });
+      return NextResponse.json({
+        user: {
+          ...updated,
+          cardImageUrl: drop.includes("cardImageUrl") ? null : (parsed.data.cardImageUrl ?? null),
+          npnNumber: drop.includes("npnNumber") ? null : (parsed.data.npnNumber ?? null),
+        },
+      });
     }
     throw e;
   }
