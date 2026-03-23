@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/permissions";
-import { resolveAgencyIdForSession } from "@/lib/session-agency";
+import { resolveAgencyIdForSessionWithUsers } from "@/lib/session-agency";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -12,7 +12,7 @@ export async function GET() {
   }
 
   const user = session.user as SessionUser;
-  const agencyId = await resolveAgencyIdForSession(user);
+  const agencyId = await resolveAgencyIdForSessionWithUsers(user);
   if (!agencyId) {
     return NextResponse.json({ error: "No agency" }, { status: 403 });
   }

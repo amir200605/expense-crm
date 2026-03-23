@@ -20,3 +20,27 @@ export async function resolveAgencyIdForSession(user: SessionUser): Promise<stri
   }
   return null;
 }
+
+/**
+ * Agency scope for team lists. SUPER_ADMIN often falls back to the oldest agency by `createdAt`,
+ * which may have no users if another agency was seeded later — so we prefer the first agency
+ * that actually has team members.
+ */
+export async function resolveAgencyIdForSessionWithUsers(user: SessionUser): Promise<string | null> {
+  const id = await resolveAgencyIdForSession(user);
+  if (!id) return null;
+
+  const count = await prisma.user.count({ where: { agencyId: id } });
+  if (count > 0) return id;
+
+  if (user.role === "SUPER_ADMIN") {
+    const withUsers = await prisma.agency.findFirst({
+      where: { users: { some: {} } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    });
+    if (withUsers?.id) return withUsers.id;
+  }
+
+  return id;
+}

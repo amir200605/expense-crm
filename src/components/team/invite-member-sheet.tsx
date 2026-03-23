@@ -163,6 +163,9 @@ export function InviteMemberSheet({
           </div>
 
           <Card className="overflow-hidden border-border/80">
+            <p className="px-1 pb-1 text-[11px] text-muted-foreground">
+              This preview matches the image attached to welcome SMS when a lead becomes a client.
+            </p>
             <div className="bg-primary px-4 py-3 text-primary-foreground">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em]">
                 Prime Insurance Agency

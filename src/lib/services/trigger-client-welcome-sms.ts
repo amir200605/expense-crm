@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { writeAgentCardToPublicUrl } from "@/lib/agent-card-image";
 import { sendClientWelcomeSms, type SendClientWelcomeSmsResult } from "@/lib/services/client-welcome-sms";
 
 export type WelcomeSmsRunResult =
@@ -39,22 +40,70 @@ export async function runClientWelcomeSmsAfterCreate(params: {
     });
 
     let agentCardImageUrl: string | null = null;
+    type SenderCard = {
+      name: string | null;
+      username: string | null;
+      role: string;
+      npnNumber: string | null;
+      phone: string | null;
+      avatarUrl: string | null;
+      cardImageUrl: string | null;
+    } | null;
+    let senderForCard: SenderCard = null;
+
     if (params.userId) {
       try {
-        const sender = await prisma.user.findUnique({
-          where: { id: params.userId },
-          select: { cardImageUrl: true, avatarUrl: true },
-        });
-        const rawCardUrl = sender?.cardImageUrl?.trim() ?? "";
-        const rawAvatarUrl = sender?.avatarUrl?.trim() ?? "";
-        const preferredImageUrl = rawCardUrl || rawAvatarUrl;
-        agentCardImageUrl =
-          preferredImageUrl && preferredImageUrl.startsWith("/")
-            ? (params.appBaseUrl ? `${params.appBaseUrl}${preferredImageUrl}` : null)
-            : preferredImageUrl || null;
-      } catch (cardErr) {
-        console.warn("[welcome-sms] could not load agent card image (run migration or ignore):", cardErr);
+        const [agency, sender] = await Promise.all([
+          prisma.agency.findUnique({
+            where: { id: params.agencyId },
+            select: { name: true },
+          }),
+          prisma.user.findUnique({
+            where: { id: params.userId },
+            select: {
+              name: true,
+              username: true,
+              role: true,
+              npnNumber: true,
+              phone: true,
+              avatarUrl: true,
+              cardImageUrl: true,
+            },
+          }),
+        ]);
+        senderForCard = sender;
+
+        if (sender && params.appBaseUrl?.trim()) {
+          try {
+            const generated = await writeAgentCardToPublicUrl({
+              userId: params.userId,
+              agencyName: agency?.name ?? "Prime Insurance Agency",
+              name: sender.name ?? params.userName ?? "Agent",
+              username: sender.username,
+              role: sender.role,
+              npnNumber: sender.npnNumber,
+              phone: sender.phone,
+              avatarUrl: sender.avatarUrl,
+              appBaseUrl: params.appBaseUrl,
+            });
+            if (generated) agentCardImageUrl = generated;
+          } catch (genErr) {
+            console.warn("[welcome-sms] agent card PNG generation failed:", genErr);
+          }
+        }
+      } catch (loadErr) {
+        console.warn("[welcome-sms] could not load sender/agency for card:", loadErr);
       }
+    }
+
+    if (!agentCardImageUrl && senderForCard) {
+      const rawCardUrl = senderForCard.cardImageUrl?.trim() ?? "";
+      const rawAvatarUrl = senderForCard.avatarUrl?.trim() ?? "";
+      const preferredImageUrl = rawCardUrl || rawAvatarUrl;
+      agentCardImageUrl =
+        preferredImageUrl && preferredImageUrl.startsWith("/")
+          ? (params.appBaseUrl ? `${params.appBaseUrl}${preferredImageUrl}` : null)
+          : preferredImageUrl || null;
     }
 
     return await sendClientWelcomeSms({

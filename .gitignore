@@ -25,3 +25,5 @@ public/uploads/avatars/*
 !public/uploads/avatars/.gitkeep
 public/uploads/agent-cards/*
 !public/uploads/agent-cards/.gitkeep
+public/uploads/agent-cards/generated/*
+!public/uploads/agent-cards/generated/.gitkeep
