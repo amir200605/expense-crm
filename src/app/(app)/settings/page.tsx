@@ -75,13 +75,6 @@ interface LeadPreviewDetail {
   rawPayload?: Record<string, unknown> | null;
 }
 
-interface TeamPreviewMember {
-  id: string;
-  name?: string | null;
-  avatarUrl?: string | null;
-  cardImageUrl?: string | null;
-}
-
 async function fetchSettings(): Promise<{ agency: AgencySettings; integrationsMeta?: IntegrationsMeta }> {
   const res = await fetch("/api/settings");
   if (!res.ok) throw new Error("Failed to load settings");
@@ -103,12 +96,6 @@ async function fetchPreviewLeads(): Promise<{ items: LeadPreviewListItem[] }> {
 async function fetchLeadPreviewDetail(leadId: string): Promise<LeadPreviewDetail> {
   const res = await fetch(`/api/leads/${leadId}`);
   if (!res.ok) throw new Error("Failed to load selected lead");
-  return res.json();
-}
-
-async function fetchTeamPreview(): Promise<{ members: TeamPreviewMember[] }> {
-  const res = await fetch("/api/team");
-  if (!res.ok) return { members: [] };
   return res.json();
 }
 
@@ -363,12 +350,6 @@ export default function SettingsPage() {
     enabled: !isAgent && Boolean(selectedPreviewLeadId),
     staleTime: 30_000,
   });
-  const { data: teamPreviewData } = useQuery({
-    queryKey: ["team-preview-media"],
-    queryFn: fetchTeamPreview,
-    enabled: !isAgent,
-    staleTime: 60_000,
-  });
 
   useEffect(() => {
     if (data?.agency) {
@@ -587,17 +568,12 @@ export default function SettingsPage() {
   }, [selectedPreviewLead, welcomeSmsTemplate, sessionData]);
 
   const previewMmsImageUrl = useMemo(() => {
-    const sessionUserId = (sessionData?.user as { id?: string } | undefined)?.id;
-    if (!sessionUserId) return "";
-    const sender = (teamPreviewData?.members ?? []).find((m) => m.id === sessionUserId);
-    const raw = sender?.cardImageUrl?.trim() || sender?.avatarUrl?.trim() || "";
-    if (!raw) return "";
-    if (raw.startsWith("http")) return raw;
-    if (raw.startsWith("/") && typeof window !== "undefined") {
-      return `${window.location.origin}${raw}`;
-    }
-    return raw;
-  }, [sessionData, teamPreviewData]);
+    if (!sessionData?.user) return "";
+    const stamp = encodeURIComponent(
+      `${selectedPreviewLeadId || "none"}-${Date.now().toString().slice(0, 8)}`
+    );
+    return `/api/team/me/card-preview?t=${stamp}`;
+  }, [sessionData?.user, selectedPreviewLeadId]);
 
   if (isAgent) {
     return (
